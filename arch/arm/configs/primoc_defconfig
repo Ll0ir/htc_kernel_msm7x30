@@ -41,15 +41,21 @@ CONFIG_HAVE_KERNEL_XZ=y
 CONFIG_KERNEL_GZIP=y
 CONFIG_SWAP=y
 CONFIG_ZIMMER=y
+<<<<<<< HEAD
+>>>>>>> e964b63... adding XZ kernel compression for ARM
+=======
 >>>>>>> e964b63... adding XZ kernel compression for ARM
 CONFIG_KERNEL_XZ=y
 # CONFIG_KERNEL_BZIP2 is not set
 # CONFIG_KERNEL_LZMA is not set
 # CONFIG_KERNEL_LZO is not set
 <<<<<<< HEAD
+<<<<<<< HEAD
 # CONFIG_KERNEL_GZIP is not set
 CONFIG_SWAP=y
 CONFIG_ZIMMER=y
+=======
+>>>>>>> e964b63... adding XZ kernel compression for ARM
 =======
 >>>>>>> e964b63... adding XZ kernel compression for ARM
 # CONFIG_SYSVIPC is not set
