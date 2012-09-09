@@ -198,13 +198,13 @@ primoc_backlight_switch(int on)
 		primoc_set_brightness(&cabc.lcd_backlight, val);
 		 /*set next backlight value with dim */
 	} else {
+		//printk add "I wanna know if the kernel is turning off the screen"
 		printk(KERN_DEBUG "turn off the backlight\n");
 		//kernel hack to get backlights turnning off in jellybean
-		if (primoc_get_brightness != 0) {
-			printk(KERN_DEBUG "THIS IS A HACK! BACKLIGHT NOT 0 SO SETTING IT TO 0 NOW!")
-			primoc_set_brightness(&cabc.lcd_backlight, 0);
-			printk(KERN_DEBUG "IF BACKLIGHT IS STILL ON THE HACK DID NOT WORK")
-		}
+		printk(KERN_DEBUG "THIS IS A HACK! BACKLIGHT NOT 0 SO SETTING IT TO 0 NOW!")
+		primoc_set_brightness(&cabc.lcd_backlight, 0);
+		printk(KERN_DEBUG "IF BACKLIGHT IS STILL ON THE HACK DID NOT WORK")
+		//end hack
 		clear_bit(GATE_ON, &cabc.status);
 		cabc.last_shrink_br = 0;
 		
