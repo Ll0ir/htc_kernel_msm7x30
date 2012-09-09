@@ -31,9 +31,9 @@
 #include <mach/vreg.h>
 #include <mach/panel_id.h>
 #include <mach/debug_display.h>
-#include "../board-primoc.h"
-#include "../devices.h"
-#include "../proc_comm.h"
+#include "board-primoc.h"
+#include "devices.h"
+#include "proc_comm.h"
 
 #ifdef CONFIG_BACKLIGHT_MAX8957
 #include <linux/mfd/max8957_bl.h>
