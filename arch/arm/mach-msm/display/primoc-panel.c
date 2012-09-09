@@ -196,6 +196,9 @@ primoc_backlight_switch(int on)
 		if (val == 0)
 			val = primoc_brightness_value;
 		primoc_set_brightness(&cabc.lcd_backlight, val);
+		//this is needed now because of what i added below, which is taking
+		//power away from the WLED (display) so this restores the power
+		max8957_set_bl_on_off(MAX8957_WLED_1, MAX8957_WLED_EN);
 		 /*set next backlight value with dim */
 	} else {
 		//printk add "I wanna know if the kernel is turning off the screen"
@@ -203,6 +206,9 @@ primoc_backlight_switch(int on)
 		//kernel hack to get backlights turnning off in jellybean
 		printk(KERN_DEBUG "THIS IS A HACK! BACKLIGHT NOT 0 SO SETTING IT TO 0 NOW!");
 		primoc_set_brightness(&cabc.lcd_backlight, 0);
+		//i pulled this from the camera flash patch, because the hardware
+		//doesnt allow powerdown when brightness set to 0, so maybe this helps
+		max8957_set_bl_on_off(MAX8957_WLED_1, MAX8957_WLED_DIS);
 		printk(KERN_DEBUG "IF BACKLIGHT IS STILL ON THE HACK DID NOT WORK");
 		//end hack
 		clear_bit(GATE_ON, &cabc.status);
