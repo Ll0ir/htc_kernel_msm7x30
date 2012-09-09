@@ -198,6 +198,7 @@ primoc_backlight_switch(int on)
 		primoc_set_brightness(&cabc.lcd_backlight, val);
 		 /*set next backlight value with dim */
 	} else {
+		printk(KERN_DEBUG "turn off the backlight\n");
 		clear_bit(GATE_ON, &cabc.status);
 		cabc.last_shrink_br = 0;
 	}
