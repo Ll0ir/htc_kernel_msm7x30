@@ -552,7 +552,7 @@ static struct snddev_icodec_data snddev_ispeaker_rx_data = {
 	.acdb_id = ACDB_ID_SPKR_PHONE_MONO,
 	.profile = &ispeaker_rx_profile,
 #endif
-	.channel_mode = 2,
+	.channel_mode = 1,
 	.pmctl_id = NULL,
 	.pmctl_id_sz = 0,
 	.default_sample_rate = 48000,
@@ -632,7 +632,7 @@ static struct snddev_icodec_data snddev_ifmradio_headset_data = {
 	.copp_id = 0,
 	.acdb_id = ACDB_ID_HEADSET_SPKR_STEREO,
 	.profile = &ifmradio_headset_profile,
-	.channel_mode = 2,
+	.channel_mode = 1,
 	.default_sample_rate = 48000,
 	/* change to raise ncp power. capless need ncp bias. */
 	.pamp_on = headset_enable,
