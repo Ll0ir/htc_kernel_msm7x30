@@ -37,7 +37,7 @@ extern int net_prio_subsys_id;
 
 extern void sock_update_netprioidx(struct sock *sk);
 
-#if (CONFIG_NETPRIO_CGROUP == y)
+#if IS_BUILTIN(CONFIG_NETPRIO_CGROUP)
 
 static inline u32 task_netprioidx(struct task_struct *p)
 {
@@ -52,7 +52,7 @@ static inline u32 task_netprioidx(struct task_struct *p)
 	return idx;
 }
 
-#elif (CONFIG_NETPRIO_CGROUP == m)
+#elif IS_MODULE(CONFIG_NETPRIO_CGROUP)
 
 static inline u32 task_netprioidx(struct task_struct *p)
 {

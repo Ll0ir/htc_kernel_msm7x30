@@ -56,7 +56,7 @@ struct netns_xfrm {
 #endif
 
 	struct dst_ops		xfrm4_dst_ops;
-#ifdef CONFIG_IPV6
+#if IS_ENABLED(CONFIG_IPV6)
 	struct dst_ops		xfrm6_dst_ops;
 #endif
 };
