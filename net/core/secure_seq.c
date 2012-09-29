@@ -156,7 +156,7 @@ u64 secure_dccp_sequence_number(__be32 saddr, __be32 daddr,
 }
 EXPORT_SYMBOL(secure_dccp_sequence_number);
 
-#if IS_ENABLED(CONFIG_IPV6)
+#ifdef CONFIG_IPV6
 u64 secure_dccpv6_sequence_number(__be32 *saddr, __be32 *daddr,
 				  __be16 sport, __be16 dport)
 {

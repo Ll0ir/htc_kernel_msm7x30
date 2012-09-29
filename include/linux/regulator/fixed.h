@@ -50,7 +50,7 @@ struct fixed_voltage_config {
 
 struct regulator_consumer_supply;
 
-#if IS_ENABLED(CONFIG_REGULATOR)
+#ifdef CONFIG_REGULATOR
 struct platform_device *regulator_register_fixed(int id,
 		struct regulator_consumer_supply *supplies, int num_supplies);
 #else
