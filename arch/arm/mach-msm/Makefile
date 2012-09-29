@@ -389,3 +389,52 @@ obj-$(CONFIG_MSM_VP_REGULATOR) += msm_vp.o
 ifdef CONFIG_MSM_CPR
 obj-$(CONFIG_DEBUG_FS) += msm_cpr-debug.o
 endif
+
+ifeq ($(CONFIG_ARCH_MSM7X30_SMD),y)
+obj-$(CONFIG_ARCH_MSM7X30_SMD) += 7x30-smd/
+else # Else CONFIG_ARCH_MSM7X30_SMD
+obj-y += modem_notifier.o
+obj-$(CONFIG_MSM_SMD_LOGGING) += smem_log.o
+ifeq ($(CONFIG_ARCH_MSM7X27A),y)
+obj-$(CONFIG_MSM_SMD) += smd.o smd_7x2x_debug.o
+else # Else CONFIG_ARCH_MSM7X27A
+obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o
+endif # End CONFIG_ARCH_MSM7X27A
+obj-$(CONFIG_MSM_SMD_TTY) += smd_tty.o
+obj-$(CONFIG_MSM_SMD_QMI) += smd_qmi.o
+obj-$(CONFIG_MSM_SMD_PKT) += smd_pkt.o
+obj-$(CONFIG_MSM_SMD_NMEA) += smd_nmea.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_device.o
+obj-$(CONFIG_DEBUG_FS) += smd_rpc_sym.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_servers.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_clients.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_xdr.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += rpcrouter_smd_xprt.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += rpc_pmapp.o
+obj-$(CONFIG_MSM_RPC_SDIO_XPRT) += rpcrouter_sdio_xprt.o
+obj-$(CONFIG_MSM_RPC_PING) += ping_mdm_rpc_client.o
+obj-$(CONFIG_MSM_RPC_PROC_COMM_TEST) += proc_comm_test.o
+obj-$(CONFIG_MSM_RPC_PING) += ping_mdm_rpc_client.o ping_apps_server.o
+obj-$(CONFIG_MSM_RPC_OEM_RAPI) += oem_rapi_client.o
+obj-$(CONFIG_MSM_RPC_WATCHDOG) += rpc_dog_keepalive.o
+obj-$(CONFIG_MSM_RPCSERVER_WATCHDOG) += rpc_server_dog_keepalive.o
+obj-$(CONFIG_MSM_RPCSERVER_TIME_REMOTE) += rpc_server_time_remote.o
+obj-$(CONFIG_MSM_RPCSERVER_HANDSET) += rpc_server_handset.o
+endif # End CONFIG_ARCH_MSM7X30_SMD
+
+#PRIMOC
+obj-$(CONFIG_MACH_PRIMOC) += board-primoc.o board-primoc-rfkill.o
+obj-$(CONFIG_MACH_PRIMOC) += board-primoc-panel.o board-primoc-audio.o
+obj-$(CONFIG_MACH_PRIMOC) += board-primoc-keypad.o
+obj-$(CONFIG_MACH_PRIMOC)+= board-primoc-mmc.o board-primoc-wifi.o
+obj-$(CONFIG_MACH_PRIMOC) += htc_bdaddress.o
+obj-$(CONFIG_MACH_PRIMOC) += htc_drm.o htc_sdservice.o devices_htc.o htc_awb_cal.o
+
+#PRIMOU
+obj-$(CONFIG_MACH_PRIMOU) += board-primou.o board-primou-rfkill.o
+obj-$(CONFIG_MACH_PRIMOU) += board-primou-panel.o board-primou-audio.o
+obj-$(CONFIG_MACH_PRIMOU) += board-primou-keypad.o
+obj-$(CONFIG_MACH_PRIMOU)+= board-primou-mmc.o board-primou-wifi.o
+obj-$(CONFIG_MACH_PRIMOU) += htc_bdaddress.o
+obj-$(CONFIG_MACH_PRIMOU) += htc_drm.o htc_sdservice.o devices_htc.o htc_awb_cal.o
