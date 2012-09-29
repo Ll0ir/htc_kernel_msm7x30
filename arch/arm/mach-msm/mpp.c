@@ -17,10 +17,10 @@
 #include <linux/device.h>
 #include <linux/init.h>
 #include <linux/debugfs.h>
+#include <linux/module.h>
 
 #include <mach/mpp.h>
-
-#include "proc_comm.h"
+#include <mach/proc_comm.h>
 
 int mpp_config_digital_out(unsigned mpp, unsigned config)
 {
@@ -54,7 +54,7 @@ static int mpp_debug_set(void *data, u64 val)
 	test_result = mpp_config_digital_out(mpp, (unsigned)val);
 	if (test_result) {
 		printk(KERN_ERR
-			   "[K] %s: mpp_config_digital_out \
+			   "%s: mpp_config_digital_out \
 			   [mpp(%d) = 0x%x] failed (err=%d)\n",
 			   __func__, mpp, (unsigned)val, test_result);
 	}

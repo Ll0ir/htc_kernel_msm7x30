@@ -29,6 +29,7 @@
 #include <linux/rfkill.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
+#include <linux/device.h>
 #include <linux/miscdevice.h>
 #include <linux/wait.h>
 #include <linux/poll.h>
@@ -235,7 +236,7 @@ static bool __rfkill_set_hw_state(struct rfkill *rfkill,
 	else
 		rfkill->state &= ~RFKILL_BLOCK_HW;
 	*change = prev != blocked;
-	any = rfkill->state & RFKILL_BLOCK_ANY;
+	any = !!(rfkill->state & RFKILL_BLOCK_ANY);
 	spin_unlock_irqrestore(&rfkill->lock, flags);
 
 	rfkill_led_trigger_event(rfkill);
@@ -644,7 +645,7 @@ static ssize_t rfkill_soft_store(struct device *dev,
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	err = strict_strtoul(buf, 0, &state);
+	err = kstrtoul(buf, 0, &state);
 	if (err)
 		return err;
 
@@ -688,7 +689,7 @@ static ssize_t rfkill_state_store(struct device *dev,
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	err = strict_strtoul(buf, 0, &state);
+	err = kstrtoul(buf, 0, &state);
 	if (err)
 		return err;
 
@@ -783,17 +784,15 @@ EXPORT_SYMBOL(rfkill_resume_polling);
 
 static int rfkill_suspend(struct device *dev, pm_message_t state)
 {
-#if 0
 	struct rfkill *rfkill = to_rfkill(dev);
 
 	rfkill_pause_polling(rfkill);
-#endif
+
 	return 0;
 }
 
 static int rfkill_resume(struct device *dev)
 {
-#if 0
 	struct rfkill *rfkill = to_rfkill(dev);
 	bool cur;
 
@@ -803,7 +802,7 @@ static int rfkill_resume(struct device *dev)
 	}
 
 	rfkill_resume_polling(rfkill);
-#endif
+
 	return 0;
 }
 #endif

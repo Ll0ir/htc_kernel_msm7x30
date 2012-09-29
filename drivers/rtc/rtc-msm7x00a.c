@@ -29,12 +29,9 @@
 #define RTC_DEBUG 0
 
 extern void msm_pm_set_max_sleep_time(int64_t sleep_time_ns);
-static unsigned long msmrtc_get_seconds(void);
 
-#if defined(CONFIG_ARCH_QSD8X50)
+#if CONFIG_MSM_AMSS_VERSION >= 6350 || defined(CONFIG_ARCH_QSD8X50)
 #define APP_TIMEREMOTE_PDEV_NAME "rs30000048:00010000"
-#elif defined(CONFIG_ARCH_MSM7X30)
-#define APP_TIMEREMOTE_PDEV_NAME "rs30000048:00040000"
 #else
 #define APP_TIMEREMOTE_PDEV_NAME "rs30000048:0da5b528"
 #endif
@@ -98,8 +95,6 @@ msmrtc_timeremote_set_time(struct device *dev, struct rtc_time *tm)
 				&req, sizeof(req),
 				&rep, sizeof(rep),
 				5 * HZ);
-	if (rc < 0)
-		pr_err("%s: msm_rpc_call_reply fail (%d)\n", __func__, rc);
 	return rc;
 }
 
@@ -125,10 +120,8 @@ msmrtc_timeremote_read_time(struct device *dev, struct rtc_time *tm)
 				&req, sizeof(req),
 				&rep, sizeof(rep),
 				5 * HZ);
-	if (rc < 0) {
-		pr_err("%s: msm_rpc_call_reply fail (%d)\n", __func__, rc);
+	if (rc < 0)
 		return rc;
-	}
 
 	if (!be32_to_cpu(rep.opt_arg)) {
 		printk(KERN_ERR "%s: No data from RTC\n", __func__);
@@ -160,11 +153,11 @@ msmrtc_timeremote_read_time(struct device *dev, struct rtc_time *tm)
 	return 0;
 }
 
+
 static int
 msmrtc_virtual_alarm_set(struct device *dev, struct rtc_wkalrm *a)
 {
 	unsigned long now = get_seconds();
-	unsigned long msmrtc_now = msmrtc_get_seconds();
 
 	if (!a->enabled) {
 		rtcalarm_time = 0;
@@ -173,8 +166,6 @@ msmrtc_virtual_alarm_set(struct device *dev, struct rtc_wkalrm *a)
 		rtc_tm_to_time(&a->time, &rtcalarm_time);
 
 	if (now > rtcalarm_time) {
-		printk("%s: now = %ld, msmrtc_now = %ld, rtcalarm_time = %ld\n",
-		       __func__, now, msmrtc_now, rtcalarm_time);
 		printk(KERN_ERR "%s: Attempt to set alarm in the past\n",
 		       __func__);
 		rtcalarm_time = 0;

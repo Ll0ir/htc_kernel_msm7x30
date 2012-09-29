@@ -163,11 +163,6 @@ static int mip6_destopt_output(struct xfrm_state *x, struct sk_buff *skb)
 	hao = mip6_padn((char *)(dstopt + 1),
 			calc_padlen(sizeof(*dstopt), 6));
 
-#ifdef CONFIG_HTC_NETWORK_MODIFY
-	if (IS_ERR(hao) || (!hao))
-		printk(KERN_ERR "[NET] hao is NULL in %s!\n", __func__);
-#endif
-
 	hao->type = IPV6_TLV_HAO;
 	BUILD_BUG_ON(sizeof(*hao) != 18);
 	hao->length = sizeof(*hao) - 2;
@@ -200,8 +195,8 @@ static inline int mip6_report_rl_allow(struct timeval *stamp,
 		mip6_report_rl.stamp.tv_sec = stamp->tv_sec;
 		mip6_report_rl.stamp.tv_usec = stamp->tv_usec;
 		mip6_report_rl.iif = iif;
-		ipv6_addr_copy(&mip6_report_rl.src, src);
-		ipv6_addr_copy(&mip6_report_rl.dst, dst);
+		mip6_report_rl.src = *src;
+		mip6_report_rl.dst = *dst;
 		allow = 1;
 	}
 	spin_unlock_bh(&mip6_report_rl.lock);
