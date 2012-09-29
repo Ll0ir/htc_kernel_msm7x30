@@ -39,7 +39,7 @@ static inline void dma_unmap_single_attrs(struct device *dev, dma_addr_t addr,
 //		ops->unmap_page(dev, addr, size, dir, attrs);
 	debug_dma_unmap_page(dev, addr, size, dir, true);
 }
-
+/*
 static inline int dma_map_sg_attrs(struct device *dev, struct scatterlist *sg,
 				   int nents, enum dma_data_direction dir,
 				   struct dma_attrs *attrs)
@@ -56,7 +56,7 @@ static inline int dma_map_sg_attrs(struct device *dev, struct scatterlist *sg,
 
 	return ents;
 }
-
+*/
 static inline void dma_unmap_sg_attrs(struct device *dev, struct scatterlist *sg,
 				      int nents, enum dma_data_direction dir,
 				      struct dma_attrs *attrs)
