@@ -66,6 +66,7 @@ $(obj)/smd_rpc_sym.c: $(src)/smd_rpc_sym $(src)/mkrpcsym.pl
 	$(call if_changed,mkrpcsym)
 
 obj-$(CONFIG_MSM_SCM) += scm.o scm-boot.o
+obj-$(CONFIG_HTC_SCM) += htc_simlock-8x60.o htc_drm.o htc_sdservice.o
 obj-$(CONFIG_MSM_SECURE_IO) += scm-io.o
 obj-$(CONFIG_MSM_PIL) += peripheral-loader.o
 obj-$(CONFIG_MSM_PIL) += scm-pas.o
@@ -153,7 +154,10 @@ obj-$(CONFIG_MSM_DALRPC_TEST) += dal_remotetest.o
 obj-$(CONFIG_ARCH_MSM7X30) += dal_axi.o
 obj-$(CONFIG_ARCH_MSM7X27A) += dal_axi.o
 obj-$(CONFIG_MSM_ADSP) += qdsp5/
-obj-$(CONFIG_MSM7KV2_AUDIO) += qdsp5v2/
+obj-$(CONFIG_MSM7KV2_AUDIO) += qdsp5v2_2x/
+obj-$(CONFIG_MSM7KV2_1X_AUDIO) += qdsp5v2_1x/
+obj-$(CONFIG_MSM7KV2_AUDIO) += htc_acoustic_7x30.o htc_acdb_7x30.o
+obj-$(CONFIG_MSM7KV2_1X_AUDIO) += htc_acoustic_7x30.o htc_acdb_7x30.o
 obj-$(CONFIG_MSM_RPCSERVER_HANDSET) += rpc_server_handset.o
 obj-$(CONFIG_MSM_QDSP6) += qdsp6/
 obj-$(CONFIG_MSM8X60_AUDIO) += qdsp6v2/
@@ -429,7 +433,7 @@ obj-$(CONFIG_MACH_PRIMOC) += board-primoc-panel.o board-primoc-audio.o
 obj-$(CONFIG_MACH_PRIMOC) += board-primoc-keypad.o
 obj-$(CONFIG_MACH_PRIMOC)+= board-primoc-mmc.o board-primoc-wifi.o
 obj-$(CONFIG_MACH_PRIMOC) += htc_bdaddress.o
-obj-$(CONFIG_MACH_PRIMOC) += htc_drm.o htc_sdservice.o devices_htc.o htc_awb_cal.o
+obj-$(CONFIG_MACH_PRIMOC) += htc_drm.o htc_sdservice.o devices_htc.o htc_awb_cal.o htc_wifi_nvs.o
 
 #PRIMOU
 obj-$(CONFIG_MACH_PRIMOU) += board-primou.o board-primou-rfkill.o
@@ -437,4 +441,27 @@ obj-$(CONFIG_MACH_PRIMOU) += board-primou-panel.o board-primou-audio.o
 obj-$(CONFIG_MACH_PRIMOU) += board-primou-keypad.o
 obj-$(CONFIG_MACH_PRIMOU)+= board-primou-mmc.o board-primou-wifi.o
 obj-$(CONFIG_MACH_PRIMOU) += htc_bdaddress.o
-obj-$(CONFIG_MACH_PRIMOU) += htc_drm.o htc_sdservice.o devices_htc.o htc_awb_cal.o
+obj-$(CONFIG_MACH_PRIMOU) += htc_drm.o htc_sdservice.o devices_htc.o htc_awb_cal.o htc_wifi_nvs.o
+
+#HTC HARDWARE ADDINS
+obj-$(CONFIG_HTC_ACCESSORY_ONEWIRE) += htc_onewire.o
+obj-$(CONFIG_MFD_MAX8957) += max8957_gpio.o
+obj-$(CONFIG_HTC_BATTCHG) += htc_battery.o
+obj-$(CONFIG_HTC_BATT_CORE) += htc_battery_core.o
+obj-$(CONFIG_HTC_BATT8x60) += htc_battery_8x60.o
+obj-$(CONFIG_MICROP_COMMON) += atmega_microp_common.o
+obj-$(CONFIG_HTC_PWRSINK) += htc_pwrsink.o
+obj-$(CONFIG_HTC_HEADSET_MGR) += htc_headset_mgr.o
+obj-$(CONFIG_HTC_HEADSET_H2W) += htc_headset_h2w.o
+obj-$(CONFIG_HTC_HEADSET_GPIO) += htc_headset_gpio.o
+obj-$(CONFIG_HTC_HEADSET_MICROP) += htc_headset_microp.o
+obj-$(CONFIG_HTC_HEADSET_PMIC) += htc_headset_pmic.o
+obj-$(CONFIG_HTC_HEADSET_MISC) += htc_headset_misc.o
+obj-$(CONFIG_HTC_HEADSET_MAX8957) += htc_headset_max8957.o
+obj-$(CONFIG_HTC_HEADSET_8X60) += htc_headset_8x60.o
+obj-$(CONFIG_HTC_BATT_CORE) += htc_battery_core.o
+obj-$(CONFIG_HTC_BATT8x60) += htc_battery_8x60.o
+obj-$(CONFIG_HTC_BATT_8960) += htc_battery_8960.o htc_battery_cell.o
+obj-$(CONFIG_HTC_BATTCHG) += htc_battery.o
+obj-$(CONFIG_HTC_BATTCHG_MAX8957) += htc_battery_max8957.o
+obj-$(CONFIG_HTC_WATCHDOG) += htc_watchdog_monitor.o
