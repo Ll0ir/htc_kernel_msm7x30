@@ -12,7 +12,7 @@
 #include <asm/memory.h>
 
 #define DMA_ERROR_CODE	(~0)
-extern struct dma_map_ops arm_dma_ops;
+/*extern struct dma_map_ops arm_dma_ops;
 
 static inline struct dma_map_ops *get_dma_ops(struct device *dev)
 {
@@ -26,7 +26,7 @@ static inline void set_dma_ops(struct device *dev, struct dma_map_ops *ops)
 	BUG_ON(!dev);
 	dev->archdata.dma_ops = ops;
 }
-
+*/
 #include <asm-generic/dma-mapping-common.h>
 
 static inline int dma_set_mask(struct device *dev, u64 mask)
