@@ -13,8 +13,6 @@
 #ifndef __PMIC8058_PWM_H__
 #define __PMIC8058_PWM_H__
 
-#include <linux/leds-pm8058.h>
-
 /* The MAX value is computation limit. Hardware limit is 393 seconds. */
 #define	PM_PWM_PERIOD_MAX		(274 * USEC_PER_SEC)
 /* The MIN value is hardware limit. */
@@ -74,9 +72,9 @@ enum pm_pwm_size {
 };
 
 enum pm_pwm_clk {
-	CLK_1KHZ = PM_PWM_CLK_1KHZ,
-	CLK_32KHZ = PM_PWM_CLK_32KHZ,
-	CLK_19P2MHZ = PM_PWM_CLK_19P2MHZ,
+	PM_PWM_CLK_1KHZ,
+	PM_PWM_CLK_32KHZ,
+	PM_PWM_CLK_19P2MHZ,
 };
 
 enum pm_pwm_pre_div {
@@ -141,10 +139,6 @@ int pm8058_pwm_lut_config(struct pwm_device *pwm, int period_us,
  * @start: to start (1), or stop (0)
  */
 int pm8058_pwm_lut_enable(struct pwm_device *pwm, int start);
-/*
- * pwm_configure - change a PWM device configuration
- */
-int pwm_configure(struct pwm_device *pwm, struct pm8058_pwm_period *pwm_conf, int bypass_lut, int pwm_value);
 
 int pm8058_pwm_set_dtest(struct pwm_device *pwm, int enable);
 
