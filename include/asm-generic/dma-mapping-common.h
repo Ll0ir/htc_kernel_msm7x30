@@ -12,7 +12,6 @@ static inline dma_addr_t dma_map_single_attrs(struct device *dev, void *ptr,
 					      enum dma_data_direction dir,
 					      struct dma_attrs *attrs)
 {
-#warning "TODO: THIS FILE NEEDS FIXED ONE DAY"
 //	struct dma_map_ops *ops = get_dma_ops(dev);
 	dma_addr_t addr;
 
