@@ -527,4 +527,95 @@ static inline void dma_unmap_single(struct device *dev, dma_addr_t handle,
 
 /**
  * dma_unmap_page - unmap a buffer previously mapped through dma_map_page()
- * @dev: valid struct device pointer, or NULL for ISA and EISA-l
+ * @dev: valid struct device pointer, or NULL for ISA and EISA-like devices
+ * @handle: DMA address of buffer
+ * @size: size of buffer (same as passed to dma_map_page)
+ * @dir: DMA transfer direction (same as passed to dma_map_page)
+ *
+ * Unmap a page streaming mode DMA translation.  The handle and size
+ * must match what was provided in the previous dma_map_page() call.
+ * All other usages are undefined.
+ *
+ * After this call, reads by the CPU to the buffer are guaranteed to see
+ * whatever the device wrote there.
+ */
+static inline void dma_unmap_page(struct device *dev, dma_addr_t handle,
+		size_t size, enum dma_data_direction dir)
+{
+	debug_dma_unmap_page(dev, handle, size, dir, false);
+	__dma_unmap_page(dev, handle, size, dir);
+}
+
+/**
+ * dma_sync_single_range_for_cpu
+ * @dev: valid struct device pointer, or NULL for ISA and EISA-like devices
+ * @handle: DMA address of buffer
+ * @offset: offset of region to start sync
+ * @size: size of region to sync
+ * @dir: DMA transfer direction (same as passed to dma_map_single)
+ *
+ * Make physical memory consistent for a single streaming mode DMA
+ * translation after a transfer.
+ *
+ * If you perform a dma_map_single() but wish to interrogate the
+ * buffer using the cpu, yet do not wish to teardown the PCI dma
+ * mapping, you must call this function before doing so.  At the
+ * next point you give the PCI dma address back to the card, you
+ * must first the perform a dma_sync_for_device, and then the
+ * device again owns the buffer.
+ */
+static inline void dma_sync_single_range_for_cpu(struct device *dev,
+		dma_addr_t handle, unsigned long offset, size_t size,
+		enum dma_data_direction dir)
+{
+	BUG_ON(!valid_dma_direction(dir));
+
+	debug_dma_sync_single_for_cpu(dev, handle + offset, size, dir);
+
+	if (!dmabounce_sync_for_cpu(dev, handle, offset, size, dir))
+		return;
+
+	__dma_single_dev_to_cpu(dma_to_virt(dev, handle) + offset, size, dir);
+}
+
+static inline void dma_sync_single_range_for_device(struct device *dev,
+		dma_addr_t handle, unsigned long offset, size_t size,
+		enum dma_data_direction dir)
+{
+	BUG_ON(!valid_dma_direction(dir));
+
+	debug_dma_sync_single_for_device(dev, handle + offset, size, dir);
+
+	if (!dmabounce_sync_for_device(dev, handle, offset, size, dir))
+		return;
+
+	__dma_single_cpu_to_dev(dma_to_virt(dev, handle) + offset, size, dir);
+}
+
+static inline void dma_sync_single_for_cpu(struct device *dev,
+		dma_addr_t handle, size_t size, enum dma_data_direction dir)
+{
+	dma_sync_single_range_for_cpu(dev, handle, 0, size, dir);
+}
+
+static inline void dma_sync_single_for_device(struct device *dev,
+		dma_addr_t handle, size_t size, enum dma_data_direction dir)
+{
+	dma_sync_single_range_for_device(dev, handle, 0, size, dir);
+}
+
+/*
+ * The scatter list versions of the above methods.
+ */
+extern int dma_map_sg(struct device *, struct scatterlist *, int,
+		enum dma_data_direction);
+extern void dma_unmap_sg(struct device *, struct scatterlist *, int,
+		enum dma_data_direction);
+extern void dma_sync_sg_for_cpu(struct device *, struct scatterlist *, int,
+		enum dma_data_direction);
+extern void dma_sync_sg_for_device(struct device *, struct scatterlist *, int,
+		enum dma_data_direction);
+
+
+#endif /* __KERNEL__ */
+#endif
