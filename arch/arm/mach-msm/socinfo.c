@@ -31,6 +31,7 @@ enum {
 	HW_PLATFORM_FLUID   = 3,
 	HW_PLATFORM_SVLTE_FFA	= 4,
 	HW_PLATFORM_SVLTE_SURF	= 5,
+	HW_PLATFORM_MTP  = 8,
 	HW_PLATFORM_LIQUID  = 9,
 	/* Dragonboard platform id is assigned as 10 in CDT */
 	HW_PLATFORM_DRAGON	= 10,
@@ -42,9 +43,10 @@ const char *hw_platform[] = {
 	[HW_PLATFORM_SURF] = "Surf",
 	[HW_PLATFORM_FFA] = "FFA",
 	[HW_PLATFORM_FLUID] = "Fluid",
-	[HW_PLATFORM_LIQUID] = "Liquid",
 	[HW_PLATFORM_SVLTE_FFA] = "SVLTE_FFA",
 	[HW_PLATFORM_SVLTE_SURF] = "SLVTE_SURF",
+	[HW_PLATFORM_MTP] = "MTP",
+	[HW_PLATFORM_LIQUID] = "Liquid",
 	[HW_PLATFORM_DRAGON] = "Dragon"
 };
 
@@ -211,6 +213,8 @@ static enum msm_cpu cpu_of_id[] = {
 	/* 9x15 ID */
 	[104] = MSM_CPU_9615,
 	[105] = MSM_CPU_9615,
+	[106] = MSM_CPU_9615,
+	[107] = MSM_CPU_9615,
 
 	/* 8064 IDs */
 	[109] = MSM_CPU_8064,
@@ -224,6 +228,18 @@ static enum msm_cpu cpu_of_id[] = {
 	/* 8627 IDs */
 	[120] = MSM_CPU_8627,
 	[121] = MSM_CPU_8627,
+
+	/* 8660A ID */
+	[122] = MSM_CPU_8960,
+
+	/* 8260A ID */
+	[123] = MSM_CPU_8960,
+
+	/* 8060A ID */
+	[124] = MSM_CPU_8960,
+
+	/* Copper IDs */
+	[126] = MSM_CPU_COPPER,
 
 	/* Uninitialized IDs are not known to run Linux.
 	   MSM_CPU_UNKNOWN is set to 0 to ensure these IDs are
@@ -591,6 +607,8 @@ void *setup_dummy_socinfo(void)
 		dummy_socinfo.id = 109;
 	else if (machine_is_msm9615_mtp() || machine_is_msm9615_cdp())
 		dummy_socinfo.id = 104;
+	else if (early_machine_is_copper())
+		dummy_socinfo.id = 126;
 	return (void *) &dummy_socinfo;
 }
 

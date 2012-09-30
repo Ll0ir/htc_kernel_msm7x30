@@ -14,11 +14,7 @@
 
 /* The AXI device ID */
 #define DALDEVICEID_AXI   0x02000053
-#if defined(CONFIG_ARCH_MSM7X27A)
 #define DALRPC_PORT_NAME  "DAL00"
-#else
-#define DALRPC_PORT_NAME  "SMD_DAL00"
-#endif
 
 enum {
 	DALRPC_AXI_CONFIGURE_BRIDGE = DALDEVICE_FIRST_DEVICE_API_IDX + 11
@@ -53,7 +49,7 @@ static int axi_configure_bridge_grfx_sync_mode(int bridge_mode)
 		DALRPC_DEST_MODEM, &dev_handle
 	);
 	if (rc) {
-		printk(KERN_ERR "[K] %s: failed to attach AXI bus device (%d)\n",
+		printk(KERN_ERR "%s: failed to attach AXI bus device (%d)\n",
 			__func__, rc);
 		goto fail_dal_attach_detach;
 	}
@@ -64,7 +60,7 @@ static int axi_configure_bridge_grfx_sync_mode(int bridge_mode)
 		bridge_mode
 	);
 	if (rc) {
-		printk(KERN_ERR "[K] %s: AXI bus device (%d) failed to be configured\n",
+		printk(KERN_ERR "%s: AXI bus device (%d) failed to be configured\n",
 			__func__, rc);
 		goto fail_dal_fcn_0;
 	}
@@ -72,7 +68,7 @@ static int axi_configure_bridge_grfx_sync_mode(int bridge_mode)
 	/* close device handle */
 	rc = daldevice_detach(dev_handle);
 	if (rc) {
-		printk(KERN_ERR "[K] %s: failed to detach AXI bus device (%d)\n",
+		printk(KERN_ERR "%s: failed to detach AXI bus device (%d)\n",
 			__func__, rc);
 		goto fail_dal_attach_detach;
 	}
