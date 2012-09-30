@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Google, Inc.
- * Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2008-2011, Code Aurora Forum. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -20,13 +20,12 @@
 #include <linux/msm_kgsl.h>
 #include <linux/android_pmem.h>
 #include <linux/regulator/machine.h>
-#include <linux/init.h>
 #include <mach/irqs.h>
 #include <mach/msm_iomap.h>
 #include <mach/dma.h>
 #include <mach/board.h>
 #include <asm/clkdev.h>
-#include <linux/ion.h>
+
 #include "devices.h"
 #include "gpio_hw.h"
 #include "footswitch.h"
@@ -98,7 +97,6 @@ static struct resource resources_uart2[] = {
 		.start	= MSM_UART2_PHYS,
 		.end	= MSM_UART2_PHYS + MSM_UART2_SIZE - 1,
 		.flags	= IORESOURCE_MEM,
-		.name  = "uart_resource"
 	},
 };
 
@@ -124,14 +122,14 @@ struct platform_device msm_device_uart1 = {
 
 struct platform_device msm_device_uart2 = {
 	.name	= "msm_serial",
-	.id	= 1,
+	.id	= 0, /* ori: 1 */
 	.num_resources	= ARRAY_SIZE(resources_uart2),
 	.resource	= resources_uart2,
 };
 
 struct platform_device msm_device_uart3 = {
 	.name	= "msm_serial",
-	.id	= 2,
+	.id	= 0, /* ori: 2 */
 	.num_resources	= ARRAY_SIZE(resources_uart3),
 	.resource	= resources_uart3,
 };
@@ -300,6 +298,18 @@ static struct resource resources_qup[] = {
 		.start	= INT_PWB_QUP_ERR,
 		.end	= INT_PWB_QUP_ERR,
 		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.name	= "i2c_clk",
+		.start	= 16,
+		.end	= 16,
+		.flags	= IORESOURCE_IO,
+	},
+	{
+		.name	= "i2c_sda",
+		.start	= 17,
+		.end	= 17,
+		.flags	= IORESOURCE_IO,
 	},
 };
 
@@ -547,12 +557,14 @@ static struct resource resources_otg[] = {
 		.end	= INT_USB_HS,
 		.flags	= IORESOURCE_IRQ,
 	},
+#ifdef CONFIG_PMIC8058
 	{
 		.name	= "vbus_on",
 		.start	= PMIC8058_IRQ_BASE + PM8058_CHGVAL_IRQ,
 		.end	= PMIC8058_IRQ_BASE + PM8058_CHGVAL_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
+#endif
 };
 
 struct platform_device msm_device_otg = {
@@ -776,6 +788,73 @@ int __init msm_add_sdcc(unsigned int controller, struct mmc_platform_data *plat)
 	return platform_device_register(pdev);
 }
 
+static struct resource resources_mddi0[] = {
+	{
+		.start	= MSM_PMDH_PHYS,
+		.end	= MSM_PMDH_PHYS + MSM_PMDH_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= INT_MDDI_PRI,
+		.end	= INT_MDDI_PRI,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static struct resource resources_mddi1[] = {
+	{
+		.start	= MSM_EMDH_PHYS,
+		.end	= MSM_EMDH_PHYS + MSM_EMDH_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= INT_MDDI_EXT,
+		.end	= INT_MDDI_EXT,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device msm_device_mddi0 = {
+	.name = "msm_mddi",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(resources_mddi0),
+	.resource = resources_mddi0,
+	.dev            = {
+		.coherent_dma_mask      = 0xffffffff,
+	},
+};
+
+struct platform_device msm_device_mddi1 = {
+	.name = "msm_mddi",
+	.id = 1,
+	.num_resources = ARRAY_SIZE(resources_mddi1),
+	.resource = resources_mddi1,
+	.dev            = {
+		.coherent_dma_mask      = 0xffffffff,
+	}
+};
+
+static struct resource resources_mdp[] = {
+	{
+		.start	= MSM_MDP_PHYS,
+		.end	= MSM_MDP_PHYS + MSM_MDP_SIZE - 1,
+		.name	= "mdp",
+		.flags	= IORESOURCE_MEM
+	},
+	{
+		.start	= INT_MDP,
+		.end	= INT_MDP,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device msm_device_mdp = {
+	.name = "msm_mdp",
+	.id = 0,
+	.num_resources = ARRAY_SIZE(resources_mdp),
+	.resource = resources_mdp,
+};
+
 static struct resource msm_vidc_720p_resources[] = {
 	{
 		.start	= 0xA3B00000,
@@ -790,10 +869,9 @@ static struct resource msm_vidc_720p_resources[] = {
 };
 
 struct msm_vidc_platform_data vidc_platform_data = {
-	.memtype = ION_CAMERA_HEAP_ID,
-	.enable_ion = 1,
-	.disable_dmx = 0,
-	.cont_mode_dpb_count = 8
+	.memtype = MEMTYPE_EBI1,
+	.enable_ion = 0,
+	.disable_dmx = 0
 };
 
 struct platform_device msm_device_vidc_720p = {
@@ -806,7 +884,7 @@ struct platform_device msm_device_vidc_720p = {
 	},
 };
 
-#if defined(CONFIG_FB_MSM_MDP40)
+#if defined(CONFIG_MSM_MDP40)
 #define MDP_BASE          0xA3F00000
 #define PMDH_BASE         0xAD600000
 #define EMDH_BASE         0xAD700000
@@ -1124,7 +1202,6 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.set_grp_async = set_grp3d_async,
 	.idle_timeout = HZ/20,
 	.nap_allowed = true,
-	.idle_needed = true,
 	.clk_map = KGSL_CLK_SRC | KGSL_CLK_CORE |
 		KGSL_CLK_IFACE | KGSL_CLK_MEM,
 };
@@ -1167,7 +1244,6 @@ static struct kgsl_device_platform_data kgsl_2d0_pdata = {
 	.set_grp_async = NULL,
 	.idle_timeout = HZ/10,
 	.nap_allowed = true,
-	.idle_needed = true,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE,
 };
 
@@ -1191,29 +1267,3 @@ struct platform_device *msm_footswitch_devices[] = {
 	FS_PCOM(FS_VPE,    "fs_vpe"),
 };
 unsigned msm_num_footswitch_devices = ARRAY_SIZE(msm_footswitch_devices);
-
-static struct resource gpio_resources[] = {
-	{
-		.start	= INT_GPIO_GROUP1,
-		.flags	= IORESOURCE_IRQ,
-	},
-	{
-		.start	= INT_GPIO_GROUP2,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-
-static struct platform_device msm_device_gpio = {
-	.name		= "msmgpio",
-	.id		= -1,
-	.resource	= gpio_resources,
-	.num_resources	= ARRAY_SIZE(gpio_resources),
-};
-
-static int __init msm7630_init_gpio(void)
-{
-	platform_device_register(&msm_device_gpio);
-	return 0;
-}
-
-postcore_initcall(msm7630_init_gpio);

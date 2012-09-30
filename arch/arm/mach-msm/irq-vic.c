@@ -24,7 +24,6 @@
 
 #include <asm/cacheflush.h>
 #include <asm/io.h>
-#include <asm/exception.h>
 
 #include <mach/hardware.h>
 
@@ -176,8 +175,11 @@ static uint8_t msm_irq_to_smsm[NR_IRQS] = {
 	[INT_PWB_I2C] = 5,
 	[INT_SDC1_0] = 6,
 	[INT_SDC1_1] = 7,
+#ifdef CONFIG_MACH_PRIMODS
+	[INT_SDC2_0] = 32,
+#else
 	[INT_SDC2_0] = 8,
-
+#endif
 	[INT_SDC2_1] = 9,
 	[INT_ADSP_A9_A11] = 10,
 	[INT_UART1] = 11,
@@ -319,7 +321,7 @@ static int msm_irq_set_wake(struct irq_data *d, unsigned int on)
 	int smsm_irq = msm_irq_to_smsm[d->irq];
 
 	if (smsm_irq == 0) {
-		printk(KERN_ERR "msm_irq_set_wake: bad wakeup irq %d\n", d->irq);
+		printk(KERN_ERR "[K] msm_irq_set_wake: bad wakeup irq %d\n", d->irq);
 		return -EINVAL;
 	}
 	if (on)
@@ -404,7 +406,7 @@ void msm_irq_enter_sleep1(bool modem_wake, int from_idle, uint32_t *irq_mask)
 		*irq_mask = msm_irq_smsm_wake_enable[!from_idle];
 		if (msm_irq_debug_mask & IRQ_DEBUG_SLEEP)
 			printk(KERN_INFO
-				"%s irq_mask %x\n", __func__, *irq_mask);
+				"[K] %s irq_mask %x\n", __func__, *irq_mask);
 	}
 }
 
@@ -460,7 +462,7 @@ int msm_irq_enter_sleep2(bool modem_wake, int from_idle)
 			break;
 		pend_irq = readl(VIC_IRQ_VEC_PEND_RD);
 		if (msm_irq_debug_mask & IRQ_DEBUG_SLEEP_INT)
-			printk(KERN_INFO "%s cleared int %d (%d)\n",
+			printk(KERN_INFO "[K] %s cleared int %d (%d)\n",
 				__func__, irq, pend_irq);
 	}
 
@@ -609,33 +611,6 @@ void __init msm_init_irq(void)
 	/* enable interrupt controller */
 	writel(3, VIC_INT_MASTEREN);
 	mb();
-}
-
-static inline void msm_vic_handle_irq(void __iomem *base_addr, struct pt_regs
-		*regs)
-{
-	u32 irqnr;
-
-	do {
-		/* 0xD0 has irq# or old irq# if the irq has been handled
-		 * 0xD4 has irq# or -1 if none pending *but* if you just
-		 * read 0xD4 you never get the first irq for some reason
-		 */
-		irqnr = readl_relaxed(base_addr + 0xD0);
-		irqnr = readl_relaxed(base_addr + 0xD4);
-		if (irqnr == -1)
-			break;
-		handle_IRQ(irqnr, regs);
-	} while (1);
-}
-
-/* enable imprecise aborts */
-#define local_cpsie_enable()  __asm__ __volatile__("cpsie a    @ enable")
-
-asmlinkage void __exception_irq_entry vic_handle_irq(struct pt_regs *regs)
-{
-	local_cpsie_enable();
-	msm_vic_handle_irq((void __iomem *)MSM_VIC_BASE, regs);
 }
 
 #if defined(CONFIG_MSM_FIQ_SUPPORT)

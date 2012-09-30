@@ -28,6 +28,9 @@
 #include <mach/board.h>
 #include <mach/msm_iomap.h>
 #include <asm/mach-types.h>
+#ifdef CONFIG_MFD_MAX8957
+#include <mach/vreg.h>
+#endif
 
 #include "smd_private.h"
 #include "clock.h"
@@ -143,13 +146,27 @@ static struct clkctl_acpu_speed acpu_freq_tbl[] = {
 
 static int acpuclk_set_acpu_vdd(struct clkctl_acpu_speed *s)
 {
-	int ret = msm_spm_set_vdd(0, s->vdd_raw);
-	if (ret)
-		return ret;
+	int ret = 0;
 
-	/* Wait for voltage to stabilize. */
-	udelay(62);
-	return 0;
+#ifdef CONFIG_MFD_MAX8957
+	struct vreg *vreg = vreg_get(0, "msmc2");
+
+	if (!vreg) {
+		printk(KERN_INFO "%s: vreg_get error\n", __func__);
+		return -ENODEV;
+	}
+	ret = vreg_set_level(vreg, s->vdd_mv);
+#else
+	ret = msm_spm_set_vdd(0, s->vdd_raw);
+#endif
+
+	if (ret)
+		printk(KERN_ERR "%s: failed, vdd_mv=%d, ret=%d\n",
+				__func__, s->vdd_mv, ret);
+	else /* Wait for voltage to stabilize. */
+		udelay(62);
+
+	return ret;
 }
 
 /* Assumes PLL2 is off and the acpuclock isn't sourced from PLL2 */
@@ -227,7 +244,7 @@ static int acpuclk_7x30_set_rate(int cpu, unsigned long rate,
 		if (tgt_s->vdd_mv > strt_s->vdd_mv) {
 			rc = acpuclk_set_acpu_vdd(tgt_s);
 			if (rc < 0) {
-				pr_err("ACPU VDD increase to %d mV failed "
+				pr_err("[K] ACPU VDD increase to %d mV failed "
 					"(%d)\n", tgt_s->vdd_mv, rc);
 				goto out;
 			}
@@ -243,7 +260,7 @@ static int acpuclk_7x30_set_rate(int cpu, unsigned long rate,
 	if (tgt_s->axi_clk_hz > strt_s->axi_clk_hz) {
 		rc = clk_set_rate(drv_state.ebi1_clk, tgt_s->axi_clk_hz);
 		if (rc < 0) {
-			pr_err("Setting AXI min rate failed (%d)\n", rc);
+			pr_err("[K] Setting AXI min rate failed (%d)\n", rc);
 			goto out;
 		}
 	}
@@ -288,7 +305,7 @@ static int acpuclk_7x30_set_rate(int cpu, unsigned long rate,
 	if (tgt_s->axi_clk_hz < strt_s->axi_clk_hz) {
 		res = clk_set_rate(drv_state.ebi1_clk, tgt_s->axi_clk_hz);
 		if (res < 0)
-			pr_warning("Setting AXI min rate failed (%d)\n", res);
+			pr_warning("[K] Setting AXI min rate failed (%d)\n", res);
 	}
 
 	/* Nothing else to do for power collapse. */
@@ -299,7 +316,7 @@ static int acpuclk_7x30_set_rate(int cpu, unsigned long rate,
 	if (tgt_s->vdd_mv < strt_s->vdd_mv) {
 		res = acpuclk_set_acpu_vdd(tgt_s);
 		if (res)
-			pr_warning("ACPU VDD decrease to %d mV failed (%d)\n",
+			pr_warning("[K] ACPU VDD decrease to %d mV failed (%d)\n",
 					tgt_s->vdd_mv, res);
 	}
 
@@ -333,7 +350,7 @@ static void __init acpuclk_hw_init(void)
 	int res;
 	u8 pll2_l = readl_relaxed(PLL2_L_VAL_ADDR) & 0xFF;
 
-	drv_state.ebi1_clk = clk_get(NULL, "ebi1_clk");
+	drv_state.ebi1_clk = clk_get(NULL, "ebi1_dcvs_clk");
 	BUG_ON(IS_ERR(drv_state.ebi1_clk));
 
 	reg_clksel = readl_relaxed(SCSS_CLK_SEL_ADDR);
@@ -352,7 +369,7 @@ static void __init acpuclk_hw_init(void)
 				break;
 		}
 		if (s->acpu_clk_khz == 0) {
-			pr_err("Error - ACPU clock reports invalid speed\n");
+			pr_err("[K] Error - ACPU clock reports invalid speed\n");
 			return;
 		}
 		break;
@@ -374,7 +391,7 @@ static void __init acpuclk_hw_init(void)
 		}
 		/* else fall through */
 	default:
-		pr_err("Error - ACPU clock reports invalid source\n");
+		pr_err("[K] Error - ACPU clock reports invalid source\n");
 		return;
 	}
 
@@ -395,7 +412,7 @@ static void __init acpuclk_hw_init(void)
 
 	res = clk_set_rate(drv_state.ebi1_clk, s->axi_clk_hz);
 	if (res < 0)
-		pr_warning("Setting AXI min rate failed!\n");
+		pr_warning("[K] Setting AXI min rate failed!\n");
 
 	pr_info("ACPU running at %d KHz\n", s->acpu_clk_khz);
 
@@ -444,20 +461,12 @@ static inline void setup_cpufreq_table(void) { }
 void __init pll2_fixup(void)
 {
 	struct clkctl_acpu_speed *speed = acpu_freq_tbl;
-	u8 pll2_l = readl_relaxed(PLL2_L_VAL_ADDR) & 0xFF;
 
 	for ( ; speed->acpu_clk_khz; speed++) {
 		if (speed->src != PLL_2)
 			backup_s = speed;
-		if (speed->pll_rate && speed->pll_rate->l == pll2_l) {
-			speed++;
-			speed->acpu_clk_khz = 0;
-			return;
-		}
 	}
 
-	pr_err("Unknown PLL2 lval %d\n", pll2_l);
-	BUG();
 }
 
 #define RPM_BYPASS_MASK	(1 << 3)

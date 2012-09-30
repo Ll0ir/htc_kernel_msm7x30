@@ -28,6 +28,18 @@ static struct msm_rpc_endpoint *chg_ep;
 
 #define MSM_RPC_CHG_PROG 0x3000001a
 
+#ifdef pr_debug
+#undef pr_debug
+#endif
+#define pr_debug(fmt, args...) \
+	printk(KERN_DEBUG "[USB] " pr_fmt(fmt), ## args)
+
+#ifdef pr_err
+#undef pr_err
+#endif
+#define pr_err(fmt, args...) \
+	printk(KERN_ERR "[USB] " pr_fmt(fmt), ## args)
+
 struct msm_chg_rpc_ids {
 	unsigned long	vers_comp;
 	unsigned	chg_usb_charger_connected_proc;
@@ -620,6 +632,14 @@ int usb_diag_update_pid_and_serial_num(uint32_t pid, const char *snum)
 	return 0;
 }
 
+int hsusb_rpc_connect(int connect)
+{
+       if (connect)
+               return msm_hsusb_rpc_connect();
+       else
+               return msm_hsusb_rpc_close();
+}
+EXPORT_SYMBOL(hsusb_rpc_connect);
 
 #ifdef CONFIG_USB_GADGET_MSM_72K
 /* charger api wrappers */

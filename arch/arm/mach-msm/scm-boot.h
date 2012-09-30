@@ -12,14 +12,10 @@
 #ifndef __MACH_SCM_BOOT_H
 #define __MACH_SCM_BOOT_H
 
-#define SCM_BOOT_ADDR				0x1
-#define SCM_FLAG_COLDBOOT_CPU1		0x01
-#define SCM_FLAG_COLDBOOT_CPU2		0x08
-#define SCM_FLAG_COLDBOOT_CPU3		0x20
-#define SCM_FLAG_WARMBOOT_CPU1		0x02
-#define SCM_FLAG_WARMBOOT_CPU0		0x04
-#define SCM_FLAG_WARMBOOT_CPU2		0x10
-#define SCM_FLAG_WARMBOOT_CPU3		0x40
+#define SCM_BOOT_ADDR			0x1
+#define SCM_FLAG_COLDBOOT_CPU1		0x1
+#define SCM_FLAG_WARMBOOT_CPU1		0x2
+#define SCM_FLAG_WARMBOOT_CPU0		0x4
 
 int scm_set_boot_addr(void *addr, int flags);
 
