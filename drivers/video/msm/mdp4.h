@@ -471,8 +471,6 @@ uint32 mdp4_overlay_op_mode(struct mdp4_overlay_pipe *pipe);
 void mdp4_lcdc_base_swap(int cndx, struct mdp4_overlay_pipe *pipe);
 void mdp4_lcdc_overlay(struct msm_fb_data_type *mfd);
 
-
-#ifdef CONFIG_FB_MSM_DTV
 void mdp4_overlay_dtv_start(void);
 void mdp4_overlay_dtv_ov_done_push(struct msm_fb_data_type *mfd,
 			struct mdp4_overlay_pipe *pipe);
@@ -486,7 +484,7 @@ void mdp4_dmae_done_dtv(void);
 void mdp4_dtv_wait4vsync(int cndx, long long *vtime);
 void mdp4_dtv_vsync_ctrl(int cndx, int enable);
 void mdp4_dtv_base_swap(int cndx, struct mdp4_overlay_pipe *pipe);
-#else
+
 static inline void mdp4_overlay_dtv_start(void)
 {
 	/* empty */
