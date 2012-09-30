@@ -276,8 +276,8 @@ static struct platform_driver primou_rfkill_driver = {
 
 static int __init primou_rfkill_init(void)
 {
-	if (!machine_is_primou())
-		return 0;
+//	if (!machine_is_primou())
+//		return 0;
 
 	return platform_driver_register(&primou_rfkill_driver);
 }
