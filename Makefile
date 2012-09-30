@@ -1199,17 +1199,9 @@ mrproper: clean archmrproper $(mrproper-dirs)
 
 # clobber - Delete all generated files, including .config
 #
-clobber: rm-dirs  := $(wildcard $(MRPROPER_DIRS))
-clobber: rm-files := $(wildcard $(MRPROPER_FILES))
-mrproper-dirs      := $(addprefix _mrproper_,Documentation/DocBook scripts)
+PHONY += clobber
 
-PHONY += $(mrproper-dirs) mrproper archmrproper
-$(mrproper-dirs):
-	$(Q)$(MAKE) $(clean)=$(patsubst _mrproper_%,%,$@)
-
-clobber: clean archmrproper $(mrproper-dirs)
-	$(call cmd,rmdirs)
-	$(call cmd,rmfiles)
+clobber: mrproper
 
 # distclean
 #
