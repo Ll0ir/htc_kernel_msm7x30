@@ -319,3 +319,87 @@ obj-$(CONFIG_ARCH_MSM8960) += mdm2.o mdm_common.o
 obj-$(CONFIG_MSM_RTB) += msm_rtb.o
 obj-$(CONFIG_MSM_CACHE_ERP) += cache_erp.o
 obj-$(CONFIG_MSM_CACHE_DUMP) += msm_cache_dump.o
+
+ifeq ($(CONFIG_ARCH_MSM7X30_SMD),y)
+obj-$(CONFIG_ARCH_MSM7X30_SMD) += 7x30-smd/
+else # Else CONFIG_ARCH_MSM7X30_SMD
+obj-y += modem_notifier.o
+obj-$(CONFIG_MSM_SMD_LOGGING) += smem_log.o
+ifeq ($(CONFIG_ARCH_MSM7X27A),y)
+obj-$(CONFIG_MSM_SMD) += smd.o smd_7x2x_debug.o
+else # Else CONFIG_ARCH_MSM7X27A
+obj-$(CONFIG_MSM_SMD) += smd.o smd_debug.o
+endif # End CONFIG_ARCH_MSM7X27A
+obj-$(CONFIG_MSM_SMD_TTY) += smd_tty.o
+obj-$(CONFIG_MSM_SMD_QMI) += smd_qmi.o
+obj-$(CONFIG_MSM_SMD_PKT) += smd_pkt.o
+obj-$(CONFIG_MSM_SMD_NMEA) += smd_nmea.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_device.o
+obj-$(CONFIG_DEBUG_FS) += smd_rpc_sym.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_servers.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_clients.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += smd_rpcrouter_xdr.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += rpcrouter_smd_xprt.o
+obj-$(CONFIG_MSM_ONCRPCROUTER) += rpc_pmapp.o
+obj-$(CONFIG_MSM_RPC_SDIO_XPRT) += rpcrouter_sdio_xprt.o
+obj-$(CONFIG_MSM_RPC_PING) += ping_mdm_rpc_client.o
+obj-$(CONFIG_MSM_RPC_PROC_COMM_TEST) += proc_comm_test.o
+obj-$(CONFIG_MSM_RPC_PING) += ping_mdm_rpc_client.o ping_apps_server.o
+obj-$(CONFIG_MSM_RPC_OEM_RAPI) += oem_rapi_client.o
+obj-$(CONFIG_MSM_RPC_WATCHDOG) += rpc_dog_keepalive.o
+obj-$(CONFIG_MSM_RPCSERVER_WATCHDOG) += rpc_server_dog_keepalive.o
+obj-$(CONFIG_MSM_RPCSERVER_TIME_REMOTE) += rpc_server_time_remote.o
+obj-$(CONFIG_MSM_RPCSERVER_HANDSET) += rpc_server_handset.o
+endif # End CONFIG_ARCH_MSM7X30_SMD
+
+#PrimoU
+obj-$(CONFIG_MACH_PRIMOU) += board-primou.o
+obj-$(CONFIG_MACH_PRIMOU) += board-primou-panel.o board-primou-audio.o
+obj-$(CONFIG_MACH_PRIMOU) += board-primou-keypad.o
+obj-$(CONFIG_MACH_PRIMOU) += board-primou-mmc.o board-primou-wifi.o
+obj-$(CONFIG_MACH_PRIMOU) += htc_bdaddress.o board-primou-rfkill.o
+
+#PrimoC
+obj-$(CONFIG_MACH_PRIMOC) += board-primoc.o board-primoc-rfkill.o
+obj-$(CONFIG_MACH_PRIMOC) += board-primoc-panel.o board-primoc-audio.o
+obj-$(CONFIG_MACH_PRIMOC) += board-primoc-keypad.o
+obj-$(CONFIG_MACH_PRIMOC)+= board-primoc-mmc.o board-primoc-wifi.o
+obj-$(CONFIG_MACH_PRIMOC) += htc_bdaddress.o
+
+#HTC Hardware
+obj-$(CONFIG_HTC_ACCESSORY_ONEWIRE) += htc_onewire.o
+obj-$(CONFIG_HTC_BATTCHG) += htc_battery.o
+obj-$(CONFIG_HTC_BATT_CORE) += htc_battery_core.o
+obj-$(CONFIG_HTC_BATT8x60) += htc_battery_8x60.o
+obj-$(CONFIG_HTC_PWRSINK) += htc_pwrsink.o
+obj-$(CONFIG_HTC_HEADSET_MGR) += htc_headset_mgr.o
+obj-$(CONFIG_HTC_HEADSET_H2W) += htc_headset_h2w.o
+obj-$(CONFIG_HTC_HEADSET_GPIO) += htc_headset_gpio.o
+obj-$(CONFIG_HTC_HEADSET_MICROP) += htc_headset_microp.o
+obj-$(CONFIG_HTC_HEADSET_PMIC) += htc_headset_pmic.o
+obj-$(CONFIG_HTC_HEADSET_MISC) += htc_headset_misc.o
+obj-$(CONFIG_HTC_HEADSET_MAX8957) += htc_headset_max8957.o
+obj-$(CONFIG_HTC_HEADSET_8X60) += htc_headset_8x60.o
+obj-$(CONFIG_HTC_BATT_CORE) += htc_battery_core.o
+obj-$(CONFIG_HTC_BATT8x60) += htc_battery_8x60.o
+obj-$(CONFIG_HTC_BATT_8960) += htc_battery_8960.o htc_battery_cell.o
+obj-$(CONFIG_HTC_BATTCHG) += htc_battery.o
+obj-$(CONFIG_HTC_BATTCHG_MAX8957) += htc_battery_max8957.o
+ifdef CONFIG_HTC_HARDWARE
+obj-$(CONFIG_MSM8X60_AUDIO) += htc_acoustic_8x60.o
+obj-$(CONFIG_ARCH_MSM7X27A) += htc_acoustic.o
+obj-$(CONFIG_MSM7KV2_AUDIO) += htc_acoustic_7x30.o htc_acdb_7x30.o
+obj-$(CONFIG_MSM_WATCHDOG) += htc_watchdog_monitor.o
+obj-$(CONFIG_MSM_SCM) += htc_simlock-8x60.o htc_drm.o htc_sdservice.o
+obj-$(CONFIG_ARCH_MSM7X30) += htc_drm.o htc_sdservice.o
+obj-$(CONFIG_ARCH_MSM8960) += devices_htc.o htc_wifi_nvs.o htc_awb_cal.o
+obj-$(CONFIG_ARCH_MSM8X60) += devices_htc.o htc_wifi_nvs.o htc_awb_cal.o
+
+#NONSMD_PACKET_FILTER
+ifdef CONFIG_MSM_NONSMD_PACKET_FILTER
+obj-$(CONFIG_MSM_SMD) += htc_port_list_lte.o
+else
+obj-$(CONFIG_MSM_SMD) += htc_port_list.o
+endif #end nonsmd packet filter
+endif
