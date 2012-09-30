@@ -62,18 +62,6 @@ static volatile int hlt_counter;
 
 #include <mach/system.h>
 
-#ifdef CONFIG_SMP
-void arch_trigger_all_cpu_backtrace(void)
-{
-	smp_send_all_cpu_backtrace();
-}
-#else
-void arch_trigger_all_cpu_backtrace(void)
-{
-	dump_stack();
-}
-#endif
-
 void disable_hlt(void)
 {
 	hlt_counter++;
@@ -226,8 +214,8 @@ void cpu_idle(void)
 
 	/* endless idle loop with no priority at all */
 	while (1) {
-		idle_notifier_call_chain(IDLE_START);
 		tick_nohz_stop_sched_tick(1);
+		idle_notifier_call_chain(IDLE_START);
 		while (!need_resched()) {
 #ifdef CONFIG_HOTPLUG_CPU
 			if (cpu_is_offline(smp_processor_id()))
