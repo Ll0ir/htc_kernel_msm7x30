@@ -92,7 +92,6 @@ struct tavarua_device {
 	/* synchrnous xfr data */
 	unsigned char sync_xfr_regs[XFR_REG_NUM];
 	struct completion sync_xfr_start;
-	struct completion shutdown_done;
 	struct completion sync_req_done;
 	int tune_req;
 	/* internal register status */
@@ -996,10 +995,6 @@ static void tavarua_handle_interrupts(struct tavarua_device *radio)
 			FMDBG("read PHY_TXGAIN is successful");
 			complete(&radio->sync_req_done);
 			break;
-		case (XFR_EXT | 0x80):
-			FMDBG("Set tone generator successful\n");
-			complete(&radio->sync_req_done);
-			break;
 		case (0x80 | RX_CONFIG):
 		case (0x80 | RADIO_CONFIG):
 		case (0x80 | RDS_CONFIG):
@@ -1113,19 +1108,6 @@ static void read_int_stat(struct work_struct *work)
 	tavarua_handle_interrupts(radio);
 }
 
-static void fm_shutdown(struct work_struct *work)
-{
-	struct tavarua_device *radio = container_of(work,
-					struct tavarua_device, work.work);
-	FMDERR("%s: Releasing the FM I2S GPIO\n", __func__);
-	if (radio->pdata->config_i2s_gpio != NULL)
-		radio->pdata->config_i2s_gpio(FM_I2S_OFF);
-	FMDERR("%s: Shutting down FM SOC\n", __func__);
-	radio->pdata->fm_shutdown(radio->pdata);
-	complete(&radio->shutdown_done);
-}
-
-
 /*************************************************************************
  * irq helper functions
  ************************************************************************/
@@ -1153,6 +1135,9 @@ static int tavarua_request_irq(struct tavarua_device *radio)
    * is limited to ten characters; it is only used for generating the "command"
    * for the kernel thread(s) (which can be seen in ps or top).
    */
+	radio->wqueue  = create_singlethread_workqueue("kfmradio");
+	if (!radio->wqueue)
+		return -ENOMEM;
   /* allocate an interrupt line */
   /* On success, request_irq() returns 0 if everything goes  as
      planned.  Your interrupt handler will start receiving its
@@ -1206,9 +1191,10 @@ static int tavarua_disable_irq(struct tavarua_device *radio)
 		return -EINVAL;
 	irq = radio->pdata->irq;
 	disable_irq_wake(irq);
-	free_irq(irq, radio);
 	cancel_delayed_work_sync(&radio->work);
 	flush_workqueue(radio->wqueue);
+	free_irq(irq, radio);
+	destroy_workqueue(radio->wqueue);
 	return 0;
 }
 
@@ -1504,7 +1490,6 @@ static int tavarua_set_region(struct tavarua_device *radio,
 	xfr_buf[1] = GET_ABS_VAL(band_low);
 	xfr_buf[2] = RSH_DATA(band_high, 8);
 	xfr_buf[3] = GET_ABS_VAL(band_high);
-	xfr_buf[4] = 0; /* Active LOW */
 	retval = sync_write_xfr(radio, RADIO_CONFIG, xfr_buf);
 	if (retval < 0) {
 		FMDERR("Could not set regional settings\n");
@@ -1855,7 +1840,6 @@ static int tavarua_fops_open(struct file *file)
 	char buffer[] = {0x00, 0x48, 0x8A, 0x8E, 0x97, 0xB7};
 	int bahama_present = -ENODEV;
 
-	INIT_DELAYED_WORK(&radio->work, read_int_stat);
 	if (!atomic_dec_and_test(&radio->users)) {
 		pr_err("%s: Device already in use."
 			"Try again later", __func__);
@@ -2088,7 +2072,10 @@ static int tavarua_fops_release(struct file *file)
 
 	FMDBG("In %s", __func__);
 
-	FMDBG("%s, Disabling the IRQs\n", __func__);
+	/* disable radio ctrl */
+	retval = tavarua_write_register(radio, RDCTRL, 0x00);
+
+	FMDBG("%s, Disable IRQs\n", __func__);
 	/* disable irq */
 	retval = tavarua_disable_irq(radio);
 	if (retval < 0) {
@@ -2096,21 +2083,10 @@ static int tavarua_fops_release(struct file *file)
 		return retval;
 	}
 
-	/* disable radio ctrl */
-	retval = tavarua_write_register(radio, RDCTRL, 0x00);
-	if (retval < 0) {
-		printk(KERN_ERR "%s: failed to disable FM\n", __func__);
-		return retval;
-	}
-
-	init_completion(&radio->shutdown_done);
-
 	bahama_present = is_bahama();
 
 	if (bahama_present == -ENODEV)
 		return -ENODEV;
-
-	INIT_DELAYED_WORK(&radio->work, fm_shutdown);
 
 	if (bahama_present)	{
 		/*Write first sequence of bytes to FM_CTL0*/
@@ -2190,17 +2166,16 @@ static int tavarua_fops_release(struct file *file)
 	}
 exit:
 	FMDBG("%s, Calling fm_shutdown\n", __func__);
-	queue_delayed_work(radio->wqueue, &radio->work,
-				msecs_to_jiffies(TAVARUA_DELAY/2));
 	/* teardown gpio and pmic */
+
 	marimba_set_fm_status(radio->marimba, false);
-	wait_for_completion(&radio->shutdown_done);
+	radio->pdata->fm_shutdown(radio->pdata);
+	if (radio->pdata->config_i2s_gpio != NULL)
+		radio->pdata->config_i2s_gpio(FM_I2S_OFF);
 	radio->handle_irq = 1;
-	radio->lp_mode = 1;
 	radio->spur_table_size = 0;
 	atomic_inc(&radio->users);
 	radio->marimba->mod_id = SLAVE_ID_BAHAMA;
-	flush_workqueue(radio->wqueue);
 	return retval;
 }
 
@@ -3171,7 +3146,7 @@ static int tavarua_vidioc_s_ctrl(struct file *file, void *priv,
 		/* check if off */
 		else if ((ctrl->value == FM_OFF) && radio->registers[RDCTRL]) {
 			radio->spur_table_size = 0;
-			FMDBG("%s: turning off...\n", __func__);
+			FMDBG("turning off...\n");
 			tavarua_write_register(radio, RDCTRL, ctrl->value);
 			/* flush the event and work queues */
 			kfifo_reset(&radio->data_buf[TAVARUA_BUF_EVENTS]);
@@ -3209,8 +3184,8 @@ static int tavarua_vidioc_s_ctrl(struct file *file, void *priv,
 		} else if (ctrl->value == FM_ANALOG_PATH) {
 			FMDBG("Analog audio path enabled ...\n");
 			retval = tavarua_set_audio_path(
-				TAVARUA_AUDIO_OUT_DIGITAL_OFF,
-				TAVARUA_AUDIO_OUT_ANALOG_ON);
+				TAVARUA_AUDIO_OUT_ANALOG_ON,
+				TAVARUA_AUDIO_OUT_DIGITAL_OFF);
 			if (retval < 0) {
 				FMDERR("Error in tavarua_set_audio_path"
 					" %d\n", retval);
@@ -3453,17 +3428,9 @@ static int tavarua_vidioc_s_ctrl(struct file *file, void *priv,
 		if (retval < 0)
 			FMDBG("write failed");
 	} break;
-	case V4L2_CID_PRIVATE_SOFT_MUTE:
-		radio->registers[IOCTRL] &= ~(IOC_SFT_MUTE);
-		if (ctrl->value)
-			radio->registers[IOCTRL] |= IOC_SFT_MUTE;
-		retval = tavarua_write_register(radio, IOCTRL,
-					radio->registers[IOCTRL]);
-		if (retval < 0)
-			FMDERR("Failed to enable/disable SMute\n");
-		break;
 	/*These IOCTL's are place holders to keep the
 	driver compatible with change in frame works for IRIS */
+	case V4L2_CID_PRIVATE_SOFT_MUTE:
 	case V4L2_CID_PRIVATE_RIVA_ACCS_ADDR:
 	case V4L2_CID_PRIVATE_RIVA_ACCS_LEN:
 	case V4L2_CID_PRIVATE_RIVA_PEEK:
@@ -3471,6 +3438,7 @@ static int tavarua_vidioc_s_ctrl(struct file *file, void *priv,
 	case V4L2_CID_PRIVATE_SSBI_ACCS_ADDR:
 	case V4L2_CID_PRIVATE_SSBI_PEEK:
 	case V4L2_CID_PRIVATE_SSBI_POKE:
+	case V4L2_CID_PRIVATE_TX_TONE:
 	case V4L2_CID_PRIVATE_RDS_GRP_COUNTERS:
 	case V4L2_CID_PRIVATE_SET_NOTCH_FILTER:
 	case V4L2_CID_PRIVATE_TAVARUA_DO_CALIBRATION:
@@ -3489,54 +3457,6 @@ static int tavarua_vidioc_s_ctrl(struct file *file, void *priv,
 		break;
 	case V4L2_CID_PRIVATE_UPDATE_SPUR_TABLE:
 		retval = update_spur_table(radio);
-		break;
-	case V4L2_CID_PRIVATE_TX_TONE:
-		retval = 0;
-		memset(xfr_buf, 0, sizeof(xfr_buf));
-		switch (ctrl->value) {
-		case ONE_KHZ_LR_EQUA_0DBFS:
-			xfr_buf[TONE_CHANNEL_EN_AND_SCALING_BYTE]
-				= TONE_LEFT_RIGHT_CH_ENABLED;
-			xfr_buf[TONE_LEFT_FREQ_BYTE] = 0x01;
-			xfr_buf[TONE_RIGHT_FREQ_BYTE] = 0x01;
-			break;
-		case ONE_KHZ_LEFTONLY_EQUA_0DBFS:
-			xfr_buf[TONE_CHANNEL_EN_AND_SCALING_BYTE]
-				 = TONE_LEFT_CH_ENABLED;
-			xfr_buf[TONE_LEFT_FREQ_BYTE] = 0x01;
-			break;
-		case ONE_KHZ_RIGHTONLY_EQUA_0DBFS:
-			xfr_buf[TONE_CHANNEL_EN_AND_SCALING_BYTE]
-				 = TONE_RIGHT_CH_ENABLED;
-			xfr_buf[TONE_RIGHT_FREQ_BYTE] = 0x01;
-			break;
-		case ONE_KHZ_LR_EQUA_l8DBFS:
-			xfr_buf[TONE_CHANNEL_EN_AND_SCALING_BYTE]
-				 = (LSH_DATA(TONE_SCALE_IND_12,
-						 TONE_SCALING_SHIFT)
-					 | TONE_LEFT_RIGHT_CH_ENABLED);
-			xfr_buf[TONE_LEFT_FREQ_BYTE] = 0x01;
-			xfr_buf[TONE_RIGHT_FREQ_BYTE] = 0x01;
-			break;
-		case FIFTEEN_KHZ_LR_EQUA_l8DBFS:
-			xfr_buf[TONE_CHANNEL_EN_AND_SCALING_BYTE]
-				 = (LSH_DATA(TONE_SCALE_IND_12,
-						 TONE_SCALING_SHIFT)
-					 | TONE_LEFT_RIGHT_CH_ENABLED);
-			xfr_buf[TONE_LEFT_FREQ_BYTE] = 0x0F;
-			xfr_buf[TONE_RIGHT_FREQ_BYTE] = 0x0F;
-			break;
-		default:
-			retval = -1;
-			FMDERR("tone generator value not valid\n");
-			break;
-		}
-		if (retval >= 0) {
-			xfr_buf[TONE_GEN_CTRL_BYTE] = 0x01;
-			retval = sync_write_xfr(radio, XFR_EXT, xfr_buf);
-		}
-		if (retval < 0)
-			FMDERR("Tone generator failed\n");
 		break;
 	default:
 		retval = -EINVAL;
@@ -3798,21 +3718,14 @@ static int tavarua_vidioc_dqbuf(struct file *file, void *priv,
 {
 
 	struct tavarua_device  *radio = video_get_drvdata(video_devdata(file));
-	enum tavarua_buf_t buf_type = -1;
-	unsigned char buf_fifo[STD_BUF_SIZE] = {0};
-	struct kfifo *data_fifo = NULL;
-	unsigned char *buf = NULL;
-	unsigned int len = 0, retval = -1;
-
-	if ((radio == NULL) || (buffer == NULL)) {
-		FMDERR("radio/buffer is NULL\n");
-		return -ENXIO;
-	}
-	buf_type = buffer->index;
-	buf = (unsigned char *)buffer->m.userptr;
-	len = buffer->length;
+	enum tavarua_buf_t buf_type = buffer->index;
+	struct kfifo *data_fifo;
+	unsigned char *buf = (unsigned char *)buffer->m.userptr;
+	unsigned int len = buffer->length;
 	FMDBG("%s: requesting buffer %d\n", __func__, buf_type);
-
+	/* check if we can access the user buffer */
+	if (!access_ok(VERIFY_WRITE, buf, len))
+		return -EFAULT;
 	if ((buf_type < TAVARUA_BUF_MAX) && (buf_type >= 0)) {
 		data_fifo = &radio->data_buf[buf_type];
 		if (buf_type == TAVARUA_BUF_EVENTS) {
@@ -3825,20 +3738,10 @@ static int tavarua_vidioc_dqbuf(struct file *file, void *priv,
 		FMDERR("invalid buffer type\n");
 		return -EINVAL;
 	}
-	if (len <= STD_BUF_SIZE) {
-		buffer->bytesused = kfifo_out_locked(data_fifo, &buf_fifo[0],
-					len, &radio->buf_lock[buf_type]);
-	} else {
-		FMDERR("kfifo_out_locked can not use len more than 128\n");
-		return -EINVAL;
-	}
-	retval = copy_to_user(buf, &buf_fifo[0], buffer->bytesused);
-	if (retval > 0) {
-		FMDERR("Failed to copy %d bytes of data\n", retval);
-		return -EAGAIN;
-	}
+	buffer->bytesused = kfifo_out_locked(data_fifo, buf, len,
+					&radio->buf_lock[buf_type]);
 
-	return retval;
+	return 0;
 }
 
 /*=============================================================================
@@ -4152,27 +4055,10 @@ int tavarua_set_audio_path(int digital_on, int analog_on)
 {
 	struct tavarua_device *radio = private_data;
 	int rx_on = radio->registers[RDCTRL] & FM_RECV;
-	int retval = 0;
 	if (!radio)
 		return -ENOMEM;
 	/* RX */
 	FMDBG("%s: digital: %d analog: %d\n", __func__, digital_on, analog_on);
-	if ((radio->pdata != NULL) && (radio->pdata->config_i2s_gpio != NULL)) {
-		if (digital_on) {
-			retval = radio->pdata->config_i2s_gpio(FM_I2S_ON);
-			if (retval) {
-				pr_err("%s: config_i2s_gpio failed\n",
-								__func__);
-			}
-		} else {
-			retval = radio->pdata->config_i2s_gpio(FM_I2S_OFF);
-			if (retval) {
-				pr_err("%s: config_i2s_gpio failed\n",
-								__func__);
-			}
-		}
-	}
-
 	SET_REG_FIELD(radio->registers[AUDIOCTRL],
 		((rx_on && analog_on) ? 1 : 0),
 		AUDIORX_ANALOG_OFFSET,
@@ -4320,9 +4206,7 @@ static int  __init tavarua_probe(struct platform_device *pdev)
 	video_set_drvdata(radio->videodev, radio);
     /*Start the worker thread for event handling and register read_int_stat
 	as worker function*/
-	radio->wqueue  = create_singlethread_workqueue("kfmradio");
-	if (!radio->wqueue)
-		return -ENOMEM;
+	INIT_DELAYED_WORK(&radio->work, read_int_stat);
 
 	/* register video device */
 	if (video_register_device(radio->videodev, VFL_TYPE_RADIO, radio_nr)) {
@@ -4361,8 +4245,6 @@ static int __devexit tavarua_remove(struct platform_device *pdev)
 
 	/* disable irq */
 	tavarua_disable_irq(radio);
-
-	destroy_workqueue(radio->wqueue);
 
 	video_unregister_device(radio->videodev);
 

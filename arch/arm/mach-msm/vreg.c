@@ -16,7 +16,6 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/module.h>
 #include <linux/device.h>
 #include <linux/init.h>
 #include <linux/slab.h>
@@ -27,7 +26,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/string.h>
 #include <mach/vreg.h>
-#include <mach/proc_comm.h>
+
+#include "proc_comm.h"
 
 #if defined(CONFIG_MSM_VREG_SWITCH_INVERTED)
 #define VREG_SWITCH_ENABLE 0

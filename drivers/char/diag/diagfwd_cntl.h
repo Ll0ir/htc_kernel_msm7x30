@@ -86,7 +86,4 @@ void diag_smd_cntl_notify(void *ctxt, unsigned event);
 void diag_smd_qdsp_cntl_notify(void *ctxt, unsigned event);
 void diag_smd_wcnss_cntl_notify(void *ctxt, unsigned event);
 
-void diag_debugfs_init(void);
-void diag_debugfs_cleanup(void);
-
 #endif

@@ -1,4 +1,4 @@
-/* arch/arm/mach-msm/include/mach/proc_comm.h
+/* arch/arm/mach-msm/proc_comm.h
  *
  * Copyright (c) 2007-2009,2011 Code Aurora Forum. All rights reserved.
  *

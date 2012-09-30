@@ -18,7 +18,6 @@
 #include <linux/mempool.h>
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
-#include <linux/sched.h>
 #include <mach/msm_smd.h>
 #include <asm/atomic.h>
 #include <asm/mach-types.h>
@@ -42,7 +41,6 @@
 #define SDIO_DATA		4
 #define WCNSS_DATA		5
 #define HSIC_DATA		6
-#define SMUX_DATA		7
 #define MODEM_PROC		0
 #define APPS_PROC		1
 #define QDSP_PROC		2
@@ -56,7 +54,6 @@
 #define DIAG_CTRL_MSG_LOG_MASK	9
 #define DIAG_CTRL_MSG_EVENT_MASK	10
 #define DIAG_CTRL_MSG_F3_MASK	11
-#define CONTROL_CHAR	0x7E
 
 /* Maximum number of pkt reg supported at initialization*/
 extern unsigned int diag_max_reg;
@@ -135,18 +132,8 @@ struct diagchar_dev {
 	struct diag_client_map *client_map;
 	int *data_ready;
 	int num_clients;
-	int polling_reg_flag;
 	struct diag_write_device *buf_tbl;
-	int use_device_tree;
-	/* DCI related variables */
-	struct diag_dci_tbl *dci_tbl;
-	struct dci_notification_tbl *dci_notify_tbl;
-	int dci_tag;
-	int dci_client_id;
-	struct mutex dci_mutex;
-	int num_dci_client;
-	unsigned char *apps_dci_buf;
-	int dci_state;
+
 	/* Memory pool parameters */
 	unsigned int itemsize;
 	unsigned int poolsize;
@@ -176,10 +163,8 @@ struct diagchar_dev {
 	unsigned char *buf_in_qdsp_1;
 	unsigned char *buf_in_qdsp_2;
 	unsigned char *buf_in_qdsp_cntl;
-	unsigned char *buf_in_wcnss_1;
-	unsigned char *buf_in_wcnss_2;
+	unsigned char *buf_in_wcnss;
 	unsigned char *buf_in_wcnss_cntl;
-	unsigned char *buf_in_dci;
 	unsigned char *usb_buf_out;
 	unsigned char *apps_rsp_buf;
 	unsigned char *user_space_data;
@@ -189,7 +174,6 @@ struct diagchar_dev {
 	unsigned char *buf_event_mask_update;
 	smd_channel_t *ch;
 	smd_channel_t *ch_cntl;
-	smd_channel_t *ch_dci;
 	smd_channel_t *chqdsp;
 	smd_channel_t *chqdsp_cntl;
 	smd_channel_t *ch_wcnss;
@@ -198,9 +182,7 @@ struct diagchar_dev {
 	int in_busy_2;
 	int in_busy_qdsp_1;
 	int in_busy_qdsp_2;
-	int in_busy_wcnss_1;
-	int in_busy_wcnss_2;
-	int in_busy_dci;
+	int in_busy_wcnss;
 	int read_len_legacy;
 	unsigned char *hdlc_buf;
 	unsigned hdlc_count;
@@ -223,7 +205,6 @@ struct diagchar_dev {
 	struct work_struct diag_modem_mask_update_work;
 	struct work_struct diag_qdsp_mask_update_work;
 	struct work_struct diag_wcnss_mask_update_work;
-	struct work_struct diag_read_smd_dci_work;
 	uint8_t *msg_masks;
 	uint8_t *log_masks;
 	int log_masks_length;
@@ -237,9 +218,7 @@ struct diagchar_dev {
 	struct diag_request *write_ptr_svc;
 	struct diag_request *write_ptr_qdsp_1;
 	struct diag_request *write_ptr_qdsp_2;
-	struct diag_request *write_ptr_wcnss_1;
-	struct diag_request *write_ptr_wcnss_2;
-	struct diag_write_device *write_ptr_dci;
+	struct diag_request *write_ptr_wcnss;
 	int logging_mode;
 	int mask_check;
 	int logging_process_id;
@@ -257,32 +236,23 @@ struct diagchar_dev {
 	struct diag_request *usb_read_mdm_ptr;
 	struct diag_request *write_ptr_mdm;
 #endif
-#ifdef CONFIG_DIAG_BRIDGE_CODE
-	/* SGLTE variables */
-	int lcid;
-	unsigned char *buf_in_smux;
-	int in_busy_smux;
-	int diag_smux_enabled;
-	/* HSIC variables */
+#ifdef CONFIG_DIAG_HSIC_PIPE
 	unsigned char *buf_in_hsic;
+	unsigned char *usb_buf_mdm_out;
+	int hsic_initialized;
 	int hsic_ch;
 	int hsic_device_enabled;
 	int hsic_device_opened;
-	int hsic_suspend;
-	int in_busy_hsic_read_on_device;
-	int in_busy_hsic_write_on_device;
+	int read_len_mdm;
+	int in_busy_hsic_read_on_mdm;
+	int in_busy_hsic_write_on_mdm;
 	int in_busy_hsic_write;
 	int in_busy_hsic_read;
-	struct work_struct diag_read_hsic_work;
-	/* USB MDM channel variables */
 	int usb_mdm_connected;
-	int read_len_mdm;
-	unsigned char *usb_buf_mdm_out;
 	struct usb_diag_ch *mdm_ch;
-	struct workqueue_struct *diag_bridge_wq;
+	struct workqueue_struct *diag_hsic_wq;
 	struct work_struct diag_read_mdm_work;
-	struct work_struct diag_disconnect_work;
-	struct work_struct diag_usb_read_complete_work;
+	struct work_struct diag_read_hsic_work;
 	struct diag_request *usb_read_mdm_ptr;
 	struct diag_request *write_ptr_mdm;
 #endif

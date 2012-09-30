@@ -2528,7 +2528,7 @@ void mdp4_init_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 {
 	struct mdp_buf_type *buf;
-	ion_phys_addr_t	addr, read_addr = 0;
+	ion_phys_addr_t	addr;
 	size_t buffer_size;
 	unsigned long len;
 
@@ -2554,36 +2554,11 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 		buf->ihdl = ion_alloc(mfd->iclient, buffer_size, SZ_4K,
 			mfd->mem_hid);
 		if (!IS_ERR_OR_NULL(buf->ihdl)) {
-			if (mdp_iommu_split_domain) {
-				if (ion_map_iommu(mfd->iclient, buf->ihdl,
-					DISPLAY_READ_DOMAIN, GEN_POOL, SZ_4K,
-					0, &read_addr, &len, 0, 0)) {
-					pr_err("ion_map_iommu() read failed\n");
-					return -ENOMEM;
-				}
-				if (mfd->mem_hid & ION_SECURE) {
-					if (ion_phys(mfd->iclient, buf->ihdl,
-						&addr, (size_t *)&len)) {
-						pr_err("%s:%d: ion_phys map failed\n",
-							 __func__, __LINE__);
-						return -ENOMEM;
-					}
-				} else {
-					if (ion_map_iommu(mfd->iclient,
-						buf->ihdl, DISPLAY_WRITE_DOMAIN,
-						GEN_POOL, SZ_4K, 0, &addr, &len,
-						0, 0)) {
-						pr_err("ion_map_iommu() failed\n");
-						return -ENOMEM;
-					}
-				}
-			} else {
-				if (ion_map_iommu(mfd->iclient, buf->ihdl,
-					DISPLAY_READ_DOMAIN, GEN_POOL, SZ_4K,
-					0, &addr, &len, 0, 0)) {
-					pr_err("ion_map_iommu() write failed\n");
-					return -ENOMEM;
-				}
+			if (ion_map_iommu(mfd->iclient, buf->ihdl,
+				DISPLAY_DOMAIN, GEN_POOL, SZ_4K, 0, &addr,
+				&len, 0, 0)) {
+				pr_err("ion_map_iommu() failed\n");
+				return -ENOMEM;
 			}
 		} else {
 			pr_err("%s:%d: ion_alloc failed\n", __func__,
@@ -2598,12 +2573,7 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 		pr_info("allocating %d bytes at %x for mdp writeback\n",
 			buffer_size, (u32) addr);
 		buf->write_addr = addr;
-
-		if (read_addr)
-			buf->read_addr = read_addr;
-		else
-			buf->read_addr = buf->write_addr;
-
+		buf->read_addr = buf->write_addr;
 		return 0;
 	} else {
 		pr_err("%s cannot allocate memory for mdp writeback!\n",
@@ -2623,16 +2593,8 @@ void mdp4_free_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 
 	if (!IS_ERR_OR_NULL(mfd->iclient)) {
 		if (!IS_ERR_OR_NULL(buf->ihdl)) {
-			if (mdp_iommu_split_domain) {
-				if (!(mfd->mem_hid & ION_SECURE))
-					ion_unmap_iommu(mfd->iclient, buf->ihdl,
-						DISPLAY_WRITE_DOMAIN, GEN_POOL);
-				ion_unmap_iommu(mfd->iclient, buf->ihdl,
-					DISPLAY_READ_DOMAIN, GEN_POOL);
-			} else {
-				ion_unmap_iommu(mfd->iclient, buf->ihdl,
-					DISPLAY_READ_DOMAIN, GEN_POOL);
-			}
+			ion_unmap_iommu(mfd->iclient, buf->ihdl,
+				DISPLAY_DOMAIN, GEN_POOL);
 			ion_free(mfd->iclient, buf->ihdl);
 			buf->ihdl = NULL;
 			pr_info("%s:%d free ION writeback imem",
@@ -2641,7 +2603,7 @@ void mdp4_free_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 	} else {
 		if (buf->write_addr) {
 			free_contiguous_memory_by_paddr(buf->write_addr);
-			pr_debug("%s:%d free writeback pmem\n", __func__,
+			pr_info("%s:%d free writeback pmem\n", __func__,
 				__LINE__);
 		}
 	}
@@ -2876,12 +2838,10 @@ int mdp4_pcc_cfg(struct mdp_pcc_cfg_data *cfg_ptr)
 
 	if (0x8 & cfg_ptr->ops)
 		outpdw(mdp_dma_op_mode,
-			((inpdw(mdp_dma_op_mode) & ~(0x1<<10)) |
-						((0x8 & cfg_ptr->ops)<<10)));
+			(inpdw(mdp_dma_op_mode)|((0x8&cfg_ptr->ops)<<10)));
 
 	outpdw(mdp_cfg_offset,
-			((inpdw(mdp_cfg_offset) & ~(0x1<<29)) |
-						((cfg_ptr->ops & 0x1)<<29)));
+			(inpdw(mdp_cfg_offset)|((cfg_ptr->ops&0x1)<<29)));
 
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
@@ -3068,9 +3028,8 @@ int mdp4_argc_cfg(struct mdp_pgc_lut_data *pgc_ptr)
 
 		if (!ret) {
 			mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-			outpdw(pgc_enable_offset, (inpdw(pgc_enable_offset) &
-							~(0x1<<lshift_bits)) |
-				((0x1 & pgc_ptr->flags) << lshift_bits));
+			outpdw(pgc_enable_offset, (inpdw(pgc_enable_offset) |
+				((0x1 & pgc_ptr->flags) << lshift_bits)));
 			mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF,
 									FALSE);
 		}
@@ -3216,93 +3175,6 @@ int mdp4_igc_lut_config(struct mdp_igc_lut_data *cfg)
 	}
 
 	ret = mdp4_igc_lut_ctrl(cfg);
-
-error:
-	return ret;
-}
-
-#define QSEED_TABLE_1_COUNT	2
-#define QSEED_TABLE_2_COUNT	1024
-
-static uint32_t mdp4_pp_block2qseed(uint32_t block)
-{
-	uint32_t valid = 0;
-	switch (block) {
-	case MDP_BLOCK_VG_1:
-	case MDP_BLOCK_VG_2:
-		valid = 0x1;
-		break;
-	default:
-		break;
-	}
-	return valid;
-}
-
-static int mdp4_qseed_write_cfg(struct mdp_qseed_cfg_data *cfg)
-{
-	int i, ret = 0;
-	uint32_t base = (uint32_t) (MDP_BASE + mdp_block2base(cfg->block));
-	uint32_t *values;
-
-	if ((cfg->table_num != 1) && (cfg->table_num != 2)) {
-		ret = -ENOTTY;
-		goto error;
-	}
-
-	if (((cfg->table_num == 1) && (cfg->len != QSEED_TABLE_1_COUNT)) ||
-		((cfg->table_num == 2) && (cfg->len != QSEED_TABLE_2_COUNT))) {
-		ret = -EINVAL;
-		goto error;
-	}
-
-	values = kmalloc(cfg->len * sizeof(uint32_t), GFP_KERNEL);
-	if (!values) {
-		ret = -ENOMEM;
-		goto error;
-	}
-
-	ret = copy_from_user(values, cfg->data, sizeof(uint32_t) * cfg->len);
-
-	base += (cfg->table_num == 1) ? MDP4_QSEED_TABLE1_OFF :
-						MDP4_QSEED_TABLE2_OFF;
-	for (i = 0; i < cfg->len; i++) {
-		MDP_OUTP(base , values[i]);
-		base += sizeof(uint32_t);
-	}
-
-	kfree(values);
-error:
-	return ret;
-}
-
-int mdp4_qseed_cfg(struct mdp_qseed_cfg_data *cfg)
-{
-	int ret = 0;
-
-	if (!mdp4_pp_block2qseed(cfg->block)) {
-		ret = -ENOTTY;
-		goto error;
-	}
-
-	if (cfg->table_num != 1) {
-		ret = -ENOTTY;
-		pr_info("%s: Only QSEED table1 supported.\n", __func__);
-		goto error;
-	}
-
-	switch ((cfg->ops & 0x6) >> 1) {
-	case 0x1:
-		pr_info("%s: QSEED read not supported\n", __func__);
-		ret = -ENOTTY;
-		break;
-	case 0x2:
-		ret = mdp4_qseed_write_cfg(cfg);
-		if (ret)
-			goto error;
-		break;
-	default:
-		break;
-	}
 
 error:
 	return ret;

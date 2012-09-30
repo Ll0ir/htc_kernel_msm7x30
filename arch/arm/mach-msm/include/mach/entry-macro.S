@@ -10,8 +10,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+	.macro	disable_fiq
+	.endm
 
-#if !defined(CONFIG_ARM_GIC)
+	.macro	arch_ret_to_user, tmp1, tmp2
+	.endm
+
+#if !defined(CONFIG_ARM_GIC) && !defined(CONFIG_MULTI_IRQ_HANDLER)
 #include <mach/msm_iomap.h>
 
 	.macro	get_irqnr_preamble, base, tmp

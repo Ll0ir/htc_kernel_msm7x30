@@ -15,7 +15,6 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 #include <linux/workqueue.h>
-#include <linux/module.h>
 #include <mach/sdio_al.h>
 #include <mach/sdio_smem.h>
 

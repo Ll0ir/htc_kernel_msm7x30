@@ -164,7 +164,6 @@ void mdp4_overlay_update_lcd(struct msm_fb_data_type *mfd)
 		MDP_OUTP(MDP_BASE + 0x00098, 0x01);
 		mdp4_init_writeback_buf(mfd, MDP4_MIXER0);
 		pipe->ov_blt_addr = 0;
-		pipe->dma_blt_addr = 0;
 	} else {
 		pipe = mddi_pipe;
 	}
@@ -254,9 +253,8 @@ int mdp4_mddi_overlay_blt_start(struct msm_fb_data_type *mfd)
 {
 	unsigned long flag;
 
-	pr_debug("%s: blt_end=%d blt_addr=%x pid=%d\n",
-		__func__, mddi_pipe->blt_end,
-		(int)mddi_pipe->ov_blt_addr, current->pid);
+	pr_debug("%s: blt_end=%d ov_blt_addr=%x pid=%d\n",
+	__func__, mddi_pipe->blt_end, (int)mddi_pipe->ov_blt_addr, current->pid);
 
 	mdp4_allocate_writeback_buf(mfd, MDP4_MIXER0);
 
@@ -273,7 +271,6 @@ int mdp4_mddi_overlay_blt_start(struct msm_fb_data_type *mfd)
 		mddi_pipe->ov_cnt = 0;
 		mddi_pipe->dmap_cnt = 0;
 		mddi_pipe->ov_blt_addr = mfd->ov0_wb_buf->write_addr;
-		mddi_pipe->dma_blt_addr = mfd->ov0_wb_buf->write_addr;
 		mdp4_stat.blt_mddi++;
 		spin_unlock_irqrestore(&mdp_spin_lock, flag);
 	return 0;
@@ -286,7 +283,7 @@ int mdp4_mddi_overlay_blt_stop(struct msm_fb_data_type *mfd)
 {
 	unsigned long flag;
 
-	pr_debug("%s: blt_end=%d blt_addr=%x\n",
+	pr_debug("%s: blt_end=%d ov_blt_addr=%x\n",
 		 __func__, mddi_pipe->blt_end, (int)mddi_pipe->ov_blt_addr);
 
 	if ((mddi_pipe->blt_end == 0) && mddi_pipe->ov_blt_addr) {
@@ -379,7 +376,6 @@ void mdp4_dma_p_done_mddi(struct mdp_dma_data *dma)
 		if (mddi_pipe->blt_end) {
 			mddi_pipe->blt_end = 0;
 			mddi_pipe->ov_blt_addr = 0;
-			mddi_pipe->dma_blt_addr = 0;
 			pr_debug("%s: END, ov_cnt=%d dmap_cnt=%d\n", __func__,
 				mddi_pipe->ov_cnt, mddi_pipe->dmap_cnt);
 			mdp_intr_mask &= ~INTR_DMA_P_DONE;
@@ -554,7 +550,7 @@ void mdp4_mddi_kickoff_video(struct msm_fb_data_type *mfd,
 		mddi_pipe->blt_cnt = 0;
 	}
 
-	pr_debug("%s: blt_addr=%d blt_cnt=%d\n",
+	pr_debug("%s: ov_blt_addr=%d blt_cnt=%d\n",
 		__func__, (int)mddi_pipe->ov_blt_addr, mddi_pipe->blt_cnt);
 
 	if (mddi_pipe->ov_blt_addr)
@@ -575,6 +571,27 @@ void mdp4_mddi_overlay_kickoff(struct msm_fb_data_type *mfd,
 {
 	unsigned long flag;
 
+	if (mdp_hw_revision == MDP4_REVISION_V2_1) {
+		if (mdp4_overlay_status_read(MDP4_OVERLAY_TYPE_UNSET)) {
+			uint32  data;
+			data = inpdw(MDP_BASE + 0x0028);
+			data &= ~0x0300;        /* bit 8, 9, MASTER4 */
+			if (mfd->fbi->var.xres == 540) /* qHD, 540x960 */
+				data |= 0x0200;
+			else
+				data |= 0x0100;
+			MDP_OUTP(MDP_BASE + 0x00028, data);
+			mdp4_overlay_status_write(MDP4_OVERLAY_TYPE_UNSET,
+				false);
+		}
+		if (mdp4_overlay_status_read(MDP4_OVERLAY_TYPE_SET)) {
+			uint32  data;
+			data = inpdw(MDP_BASE + 0x0028);
+			data &= ~0x0300;        /* bit 8, 9, MASTER4 */
+			MDP_OUTP(MDP_BASE + 0x00028, data);
+			mdp4_overlay_status_write(MDP4_OVERLAY_TYPE_SET, false);
+		}
+	}
 	mdp_enable_irq(MDP_OVERLAY0_TERM);
 	spin_lock_irqsave(&mdp_spin_lock, flag);
 	mfd->dma->busy = TRUE;

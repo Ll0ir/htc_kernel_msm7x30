@@ -10,7 +10,6 @@
  * GNU General Public License for more details.
  */
 
-#include <linux/export.h>
 #include <linux/qcomwlan_secif.h>
 
 /*

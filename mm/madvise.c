@@ -65,12 +65,6 @@ static long madvise_behavior(struct vm_area_struct * vma,
 		}
 		new_flags &= ~VM_DONTCOPY;
 		break;
-	case MADV_DONTDUMP:
-		new_flags |= VM_NODUMP;
-		break;
-	case MADV_DODUMP:
-		new_flags &= ~VM_NODUMP;
-		break;
 	case MADV_MERGEABLE:
 	case MADV_UNMERGEABLE:
 		error = ksm_madvise(vma, start, end, behavior, &new_flags);
@@ -224,7 +218,7 @@ static long madvise_remove(struct vm_area_struct *vma,
 	endoff = (loff_t)(end - vma->vm_start - 1)
 			+ ((loff_t)vma->vm_pgoff << PAGE_SHIFT);
 
-	/* vmtruncate_range needs to take i_mutex */
+	/* vmtruncate_range needs to take i_mutex and i_alloc_sem */
 	up_read(&current->mm->mmap_sem);
 	error = vmtruncate_range(mapping->host, offset, endoff);
 	down_read(&current->mm->mmap_sem);
@@ -257,7 +251,7 @@ static int madvise_hwpoison(int bhv, unsigned long start, unsigned long end)
 		printk(KERN_INFO "Injecting memory failure for page %lx at %lx\n",
 		       page_to_pfn(p), start);
 		/* Ignore return value for now */
-		memory_failure(page_to_pfn(p), 0, MF_COUNT_INCREASED);
+		__memory_failure(page_to_pfn(p), 0, MF_COUNT_INCREASED);
 	}
 	return ret;
 }
@@ -299,8 +293,6 @@ madvise_behavior_valid(int behavior)
 	case MADV_HUGEPAGE:
 	case MADV_NOHUGEPAGE:
 #endif
-	case MADV_DONTDUMP:
-	case MADV_DODUMP:
 		return 1;
 
 	default:

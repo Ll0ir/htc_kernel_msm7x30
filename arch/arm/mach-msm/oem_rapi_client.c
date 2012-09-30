@@ -15,7 +15,6 @@
  * OEM RAPI CLIENT Driver source file
  */
 
-#include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/err.h>
@@ -24,7 +23,6 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/delay.h>
-#include <linux/module.h>
 #include <mach/msm_rpcrouter.h>
 #include <mach/oem_rapi_client.h>
 

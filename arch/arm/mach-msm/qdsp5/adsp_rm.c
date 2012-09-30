@@ -17,7 +17,6 @@
 #include <linux/sched.h>
 #include <linux/uaccess.h>
 #include <linux/msm_adsp.h>
-#include <linux/module.h>
 
 #include <mach/qdsp5/qdsp5rmtcmdi.h>
 #include <mach/qdsp5/qdsp5rmtmsg.h>
@@ -33,8 +32,7 @@ static char *rm_errs[] = {
 			"PCM Blocks not Sufficient",
 			"TASK is already occupied",
 			"Concurrency not supported",
-			"MIPS not sufficient",
-			"DDP invalid/no licence"
+			"MIPS not sufficient"
 			};
 static struct client {
 	wait_queue_head_t		wait;

@@ -93,7 +93,6 @@ int mdp_lcdc_on(struct platform_device *pdev)
 	uint32 timer_base = LCDC_BASE;
 	uint32 block = MDP_DMA2_BLOCK;
 	int ret;
-	uint32_t mask, curr;
 
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
 
@@ -172,9 +171,6 @@ int mdp_lcdc_on(struct platform_device *pdev)
 	/* x/y coordinate = always 0 for lcdc */
 	MDP_OUTP(MDP_BASE + dma_base + 0x10, 0);
 	/* dma config */
-	curr = inpdw(MDP_BASE + DMA_P_BASE);
-	mask = 0x0FFFFFFF;
-	dma2_cfg_reg = (dma2_cfg_reg & mask) | (curr & ~mask);
 	MDP_OUTP(MDP_BASE + dma_base, dma2_cfg_reg);
 
 	/*
@@ -250,12 +246,6 @@ int mdp_lcdc_on(struct platform_device *pdev)
 	ctrl_polarity =
 	    (data_en_polarity << 2) | (vsync_polarity << 1) | (hsync_polarity);
 
-	if (!(mfd->cont_splash_done)) {
-		mdp_pipe_ctrl(MDP_CMD_BLOCK,
-			MDP_BLOCK_POWER_OFF, FALSE);
-		MDP_OUTP(MDP_BASE + timer_base, 0);
-	}
-
 	MDP_OUTP(MDP_BASE + timer_base + 0x4, hsync_ctrl);
 	MDP_OUTP(MDP_BASE + timer_base + 0x8, vsync_period);
 	MDP_OUTP(MDP_BASE + timer_base + 0xc, vsync_pulse_width * hsync_period);
@@ -330,27 +320,17 @@ int mdp_lcdc_off(struct platform_device *pdev)
 
 void mdp_dma_lcdc_vsync_ctrl(int enable)
 {
-	unsigned long flag;
 	if (vsync_cntrl.vsync_irq_enabled == enable)
 		return;
 
-	spin_lock_irqsave(&mdp_spin_lock, flag);
-	if (!enable)
-		INIT_COMPLETION(vsync_cntrl.vsync_wait);
 	vsync_cntrl.vsync_irq_enabled = enable;
-	spin_unlock_irqrestore(&mdp_spin_lock, flag);
 
 	if (enable) {
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-		spin_lock_irqsave(&mdp_spin_lock, flag);
-		outp32(MDP_INTR_CLEAR, LCDC_FRAME_START);
-		mdp_intr_mask |= LCDC_FRAME_START;
-		outp32(MDP_INTR_ENABLE, mdp_intr_mask);
-		mdp_enable_irq(MDP_VSYNC_TERM);
-		spin_unlock_irqrestore(&mdp_spin_lock, flag);
+		mdp3_vsync_irq_enable(LCDC_FRAME_START, MDP_VSYNC_TERM);
 	} else {
-		wait_for_completion(&vsync_cntrl.vsync_wait);
-		mdp_disable_irq(MDP_VSYNC_TERM);
+		mdp3_vsync_irq_disable(LCDC_FRAME_START, MDP_VSYNC_TERM);
+		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	}
 }
 

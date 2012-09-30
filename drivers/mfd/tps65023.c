@@ -13,7 +13,6 @@
 
 #include <linux/i2c.h>
 #include <linux/mfd/tps65023.h>
-#include <linux/module.h>
 
 /* TPS65023_registers */
 #define TPS65023_VERSION	0

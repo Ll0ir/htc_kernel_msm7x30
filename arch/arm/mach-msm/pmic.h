@@ -14,7 +14,7 @@
 #ifndef __ARCH_ARM_MACH_PMIC_H
 #define __ARCH_ARM_MACH_PMIC_H
 
-#include <mach/proc_comm.h>
+#include "proc_comm.h"
 
 enum spkr_left_right {
 	LEFT_SPKR,

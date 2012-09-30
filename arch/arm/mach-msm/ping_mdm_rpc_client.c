@@ -15,7 +15,6 @@
  * SMD RPC PING MODEM Driver
  */
 
-#include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/err.h>
@@ -24,7 +23,6 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #include <linux/kfifo.h>
-#include <linux/export.h>
 #include <mach/msm_rpcrouter.h>
 
 #define PING_TEST_BASE 0x31

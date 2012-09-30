@@ -481,20 +481,16 @@ static void mdp_dma2_update_sub(struct msm_fb_data_type *mfd)
 void mdp_dma2_update(struct msm_fb_data_type *mfd)
 #endif
 {
-	unsigned long flag;
-
 	down(&mfd->dma->mutex);
 	if ((mfd) && (!mfd->dma->busy) && (mfd->panel_power_on)) {
 		down(&mfd->sem);
 		mfd->ibuf_flushed = TRUE;
 		mdp_dma2_update_lcd(mfd);
 
-		spin_lock_irqsave(&mdp_spin_lock, flag);
 		mdp_enable_irq(MDP_DMA2_TERM);
 		mfd->dma->busy = TRUE;
 		INIT_COMPLETION(mfd->dma->comp);
 
-		spin_unlock_irqrestore(&mdp_spin_lock, flag);
 		/* schedule DMA to start */
 		mdp_dma_schedule(mfd, MDP_DMA2_TERM);
 		up(&mfd->sem);
@@ -514,28 +510,18 @@ void mdp_dma2_update(struct msm_fb_data_type *mfd)
 
 void mdp_dma_vsync_ctrl(int enable)
 {
-	unsigned long flag;
 	if (vsync_cntrl.vsync_irq_enabled == enable)
 		return;
 
-	spin_lock_irqsave(&mdp_spin_lock, flag);
-	if (!enable)
-		INIT_COMPLETION(vsync_cntrl.vsync_wait);
 	vsync_cntrl.vsync_irq_enabled = enable;
-	spin_unlock_irqrestore(&mdp_spin_lock, flag);
 
 	if (enable) {
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 		MDP_OUTP(MDP_BASE + 0x021c, 0x10); /* read pointer */
-		spin_lock_irqsave(&mdp_spin_lock, flag);
-		outp32(MDP_INTR_CLEAR, MDP_PRIM_RDPTR);
-		mdp_intr_mask |= MDP_PRIM_RDPTR;
-		outp32(MDP_INTR_ENABLE, mdp_intr_mask);
-		mdp_enable_irq(MDP_VSYNC_TERM);
-		spin_unlock_irqrestore(&mdp_spin_lock, flag);
+		mdp3_vsync_irq_enable(MDP_PRIM_RDPTR, MDP_VSYNC_TERM);
 	} else {
-		wait_for_completion(&vsync_cntrl.vsync_wait);
-		mdp_disable_irq(MDP_VSYNC_TERM);
+		mdp3_vsync_irq_disable(MDP_PRIM_RDPTR, MDP_VSYNC_TERM);
+		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	}
 }
 
@@ -559,9 +545,8 @@ void mdp_set_dma_pan_info(struct fb_info *info, struct mdp_dirty_region *dirty,
 	down(&mfd->sem);
 
 	iBuf = &mfd->ibuf;
-
-	if (mfd->display_iova)
-		iBuf->buf = (uint8 *)mfd->display_iova;
+	if (mfd->map_buffer)
+		iBuf->buf = (uint8 *)mfd->map_buffer->iova[0];
 	else
 		iBuf->buf = (uint8 *) info->fix.smem_start;
 

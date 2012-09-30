@@ -24,8 +24,6 @@
 /* Bluetooth HCI Management interface */
 
 #include <linux/uaccess.h>
-#include <linux/interrupt.h>
-#include <linux/module.h>
 #include <asm/unaligned.h>
 
 #include <net/bluetooth/bluetooth.h>
@@ -310,7 +308,7 @@ static void mgmt_pending_foreach(u16 opcode, int index,
 
 		cmd = list_entry(p, struct pending_cmd, list);
 
-		if (opcode > 0 && cmd->opcode != opcode)
+		if (cmd->opcode != opcode)
 			continue;
 
 		if (index >= 0 && cmd->index != index)
@@ -418,7 +416,6 @@ static u8 get_service_classes(struct hci_dev *hdev)
 static int update_class(struct hci_dev *hdev)
 {
 	u8 cod[3];
-	int err = 0;
 
 	BT_DBG("%s", hdev->name);
 
@@ -432,12 +429,7 @@ static int update_class(struct hci_dev *hdev)
 	if (memcmp(cod, hdev->dev_class, 3) == 0)
 		return 0;
 
-	err =  hci_send_cmd(hdev, HCI_OP_WRITE_CLASS_OF_DEV, sizeof(cod), cod);
-
-	if (err == 0)
-		memcpy(hdev->dev_class, cod, 3);
-
-	return err;
+	return hci_send_cmd(hdev, HCI_OP_WRITE_CLASS_OF_DEV, sizeof(cod), cod);
 }
 
 static int set_limited_discoverable(struct sock *sk, u16 index,
@@ -1006,12 +998,12 @@ static int set_dev_class(struct sock *sk, u16 index, unsigned char *data,
 	hdev->major_class |= cp->major & MGMT_MAJOR_CLASS_MASK;
 	hdev->minor_class = cp->minor;
 
-	if (test_bit(HCI_UP, &hdev->flags)) {
+	if (test_bit(HCI_UP, &hdev->flags))
 		err = update_class(hdev);
-		if (err == 0)
-			err = cmd_complete(sk, index,
-		MGMT_OP_SET_DEV_CLASS, hdev->dev_class, sizeof(u8)*3);
-	} else
+	else
+		err = 0;
+
+	if (err == 0)
 		err = cmd_complete(sk, index, MGMT_OP_SET_DEV_CLASS, NULL, 0);
 
 	hci_dev_unlock_bh(hdev);
@@ -1361,23 +1353,20 @@ static int encrypt_link(struct sock *sk, u16 index, unsigned char *data,
 	if (!hdev)
 		return cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, ENODEV);
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 
 	if (!test_bit(HCI_UP, &hdev->flags)) {
 		err = cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, ENETDOWN);
-		goto done;
+		goto failed;
 	}
 
-	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &cp->bdaddr);
-	if (!conn) {
-		err = cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, ENOTCONN);
-		goto done;
-	}
+	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK,
+					&cp->bdaddr);
+	if (!conn)
+		return cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, ENOTCONN);
 
-	if (test_and_set_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend)) {
-		err = cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, EINPROGRESS);
-		goto done;
-	}
+	if (test_and_set_bit(HCI_CONN_ENCRYPT_PEND, &conn->pend))
+		return cmd_status(sk, index, MGMT_OP_ENCRYPT_LINK, EINPROGRESS);
 
 	if (conn->link_mode & HCI_LM_AUTH) {
 		enc.handle = cpu_to_le16(conn->handle);
@@ -1394,8 +1383,8 @@ static int encrypt_link(struct sock *sk, u16 index, unsigned char *data,
 		}
 	}
 
-done:
-	hci_dev_unlock_bh(hdev);
+failed:
+	hci_dev_unlock(hdev);
 	hci_dev_put(hdev);
 
 	return err;
@@ -1631,8 +1620,8 @@ static int pair_device(struct sock *sk, u16 index, unsigned char *data, u16 len)
 
 	entry = hci_find_adv_entry(hdev, &cp->bdaddr);
 	if (entry && entry->flags & 0x04) {
-		conn = hci_le_connect(hdev, 0, &cp->bdaddr, sec_level,
-							auth_type, NULL);
+		conn = hci_connect(hdev, LE_LINK, 0, &cp->bdaddr, sec_level,
+								auth_type);
 	} else {
 		/* ACL-SSP does not support io_cap 0x04 (KeyboadDisplay) */
 		if (io_cap == 0x04)
@@ -1834,7 +1823,7 @@ static int set_rssi_reporter(struct sock *sk, u16 index,
 		return cmd_status(sk, index, MGMT_OP_SET_RSSI_REPORTER,
 							ENODEV);
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 
 	conn = hci_conn_hash_lookup_ba(hdev, LE_LINK, &cp->bdaddr);
 
@@ -1849,7 +1838,7 @@ static int set_rssi_reporter(struct sock *sk, u16 index,
 			__le16_to_cpu(cp->interval), cp->updateOnThreshExceed);
 
 failed:
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 	hci_dev_put(hdev);
 
 	return err;
@@ -1873,7 +1862,7 @@ static int unset_rssi_reporter(struct sock *sk, u16 index,
 		return cmd_status(sk, index, MGMT_OP_UNSET_RSSI_REPORTER,
 					ENODEV);
 
-	hci_dev_lock_bh(hdev);
+	hci_dev_lock(hdev);
 
 	conn = hci_conn_hash_lookup_ba(hdev, LE_LINK, &cp->bdaddr);
 
@@ -1886,7 +1875,7 @@ static int unset_rssi_reporter(struct sock *sk, u16 index,
 	hci_conn_unset_rssi_reporter(conn);
 
 failed:
-	hci_dev_unlock_bh(hdev);
+	hci_dev_unlock(hdev);
 	hci_dev_put(hdev);
 
 	return err;
@@ -2137,10 +2126,9 @@ static int start_discovery(struct sock *sk, u16 index)
 
 	err = hci_send_cmd(hdev, HCI_OP_INQUIRY, sizeof(cp), &cp);
 
-	if (err < 0) {
+	if (err < 0)
 		mgmt_pending_remove(cmd);
-		hdev->disco_state = SCAN_IDLE;
-	} else if (lmp_le_capable(hdev)) {
+	else if (lmp_le_capable(hdev)) {
 		cmd = mgmt_pending_find(MGMT_OP_STOP_DISCOVERY, index);
 		if (!cmd)
 			mgmt_pending_add(sk, MGMT_OP_STOP_DISCOVERY, index,
@@ -2152,8 +2140,7 @@ static int start_discovery(struct sock *sk, u16 index)
 		del_timer(&hdev->disco_timer);
 		mod_timer(&hdev->disco_timer,
 				jiffies + msecs_to_jiffies(20000));
-	} else
-		hdev->disco_state = SCAN_BR;
+	}
 
 failed:
 	hci_dev_unlock_bh(hdev);
@@ -2197,7 +2184,9 @@ static int stop_discovery(struct sock *sk, u16 index)
 			err = cmd_complete(sk, index, MGMT_OP_STOP_DISCOVERY,
 								NULL, 0);
 		}
-	} else if (state == SCAN_BR)
+	}
+
+	if (err < 0)
 		err = hci_send_cmd(hdev, HCI_OP_INQUIRY_CANCEL, 0, NULL);
 
 	cmd = mgmt_pending_find(MGMT_OP_STOP_DISCOVERY, index);
@@ -2483,14 +2472,6 @@ done:
 	return err;
 }
 
-static void cmd_status_rsp(struct pending_cmd *cmd, void *data)
-{
-	u8 *status = data;
-
-	cmd_status(cmd->sk, cmd->index, cmd->opcode, *status);
-	mgmt_pending_remove(cmd);
-}
-
 int mgmt_index_added(u16 index)
 {
 	BT_DBG("%d", index);
@@ -2499,12 +2480,7 @@ int mgmt_index_added(u16 index)
 
 int mgmt_index_removed(u16 index)
 {
-	u8 status = ENODEV;
-
 	BT_DBG("%d", index);
-
-	mgmt_pending_foreach(0, index, cmd_status_rsp, &status);
-
 	return mgmt_event(MGMT_EV_INDEX_REMOVED, index, NULL, 0, NULL);
 }
 
@@ -2542,11 +2518,6 @@ int mgmt_powered(u16 index, u8 powered)
 	BT_DBG("hci%u %d", index, powered);
 
 	mgmt_pending_foreach(MGMT_OP_SET_POWERED, index, mode_rsp, &match);
-
-	if (!powered) {
-		u8 status = ENETDOWN;
-		mgmt_pending_foreach(0, index, cmd_status_rsp, &status);
-	}
 
 	ev.val = powered;
 
@@ -2663,20 +2634,21 @@ static void disconnect_rsp(struct pending_cmd *cmd, void *data)
 	mgmt_pending_remove(cmd);
 }
 
-int mgmt_disconnected(u16 index, bdaddr_t *bdaddr)
+int mgmt_disconnected(u16 index, bdaddr_t *bdaddr, u8 reason)
 {
 	struct mgmt_ev_disconnected ev;
 	struct sock *sk = NULL;
 	int err;
 
-	mgmt_pending_foreach(MGMT_OP_DISCONNECT, index, disconnect_rsp, &sk);
-
 	bacpy(&ev.bdaddr, bdaddr);
+	ev.reason = reason;
 
 	err = mgmt_event(MGMT_EV_DISCONNECTED, index, &ev, sizeof(ev), sk);
 
 	if (sk)
 		sock_put(sk);
+
+	mgmt_pending_foreach(MGMT_OP_DISCONNECT, index, disconnect_rsp, &sk);
 
 	return err;
 }
@@ -2960,7 +2932,7 @@ void mgmt_read_rssi_complete(u16 index, s8 rssi, bdaddr_t *bdaddr,
 
 	if (conn->rssi_update_thresh_exceed == 1) {
 		BT_DBG("rssi_update_thresh_exceed == 1");
-		if (rssi > conn->rssi_threshold) {
+		if (rssi >= conn->rssi_threshold) {
 			memset(&ev, 0, sizeof(ev));
 			bacpy(&ev.bdaddr, bdaddr);
 			ev.rssi = rssi;
@@ -2973,7 +2945,7 @@ void mgmt_read_rssi_complete(u16 index, s8 rssi, bdaddr_t *bdaddr,
 		}
 	} else {
 		BT_DBG("rssi_update_thresh_exceed == 0");
-		if (rssi < conn->rssi_threshold) {
+		if (rssi <= conn->rssi_threshold) {
 			memset(&ev, 0, sizeof(ev));
 			bacpy(&ev.bdaddr, bdaddr);
 			ev.rssi = rssi;

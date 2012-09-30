@@ -70,7 +70,6 @@ static struct vsycn_ctrl {
 	int update_ndx;
 	int dmae_intr_cnt;
 	atomic_t suspend;
-	int dmae_wait_cnt;
 	int wait_vsync_cnt;
 	int blt_change;
 	int fake_vsync;
@@ -238,10 +237,14 @@ int mdp4_dtv_pipe_commit(void)
 	return cnt;
 }
 
-void mdp4_dtv_vsync_ctrl(struct fb_info *info, int enable)
+void mdp4_dtv_vsync_ctrl(int cndx, int enable)
 {
 	struct vsycn_ctrl *vctrl;
-	int cndx = 0;
+
+	if (cndx >= MAX_CONTROLLER) {
+		pr_err("%s: out or range: cndx=%d\n", __func__, cndx);
+		return;
+	}
 
 	vctrl = &vsync_ctrl_db[cndx];
 
