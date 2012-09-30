@@ -33,9 +33,9 @@
 #include <mach/panel_id.h>
 #include <mach/debug_display.h>
 
-#include "../board-primou.h"
-#include "../devices.h"
-#include "../proc_comm.h"
+#include "board-primou.h"
+#include "devices.h"
+#include "proc_comm.h"
 
 static struct vreg *V_LCMIO_1V8;
 static struct vreg *V_LCMIO_2V8;

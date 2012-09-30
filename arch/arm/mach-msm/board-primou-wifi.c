@@ -93,7 +93,7 @@ static struct wifi_platform_data primou_wifi_control = {
 	.set_carddetect = primou_wifi_set_carddetect,
 	.mem_prealloc   = primou_wifi_mem_prealloc,
 	.get_mac_addr	= primou_wifi_get_mac_addr,
-	.dot11n_enable  = 1,
+//TODO this isnt correct	.dot11n_enable  = 1,
 };
 
 static struct platform_device primou_wifi_device = {
