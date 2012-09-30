@@ -143,7 +143,7 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 /*
  * asm_do_IRQ is the interface to be used from assembly code.
  */
-asmlinkage void __exception_irq_entry,
+asmlinkage void __exception_irq_entry
 asm_do_IRQ(unsigned int irq, struct pt_regs *regs)
 {
 	handle_IRQ(irq, regs);
