@@ -1734,7 +1734,6 @@ void mdp4_overlay_borderfill_stage_up(struct mdp4_overlay_pipe *pipe)
 	else if (ctrl->panel_mode & MDP4_PANEL_DTV)
 		mdp4_dtv_base_swap(0, pipe);
 #endif
-
 	mdp4_overlay_reg_flush(bspipe, 1);
 	/* borderfill pipe as base layer */
 	mdp4_mixer_stage_up(pipe, 0);
@@ -1876,7 +1875,7 @@ static void mdp4_overlay_bg_solidfill(struct blend_cfg *blend)
 		u32 src_size = ((pipe->src_h << 16) | pipe->src_w);
 		outpdw(base + 0x0000, src_size);
 		format &= ~MDP4_FORMAT_SOLID_FILL;
-		blend->solidfill_pipedrivers/video/msm/mdp4_overlay.c:1788: error: to = NULL;
+		blend->solidfill_pipe = NULL;
 	}
 
 	outpdw(base + 0x50, format);
@@ -3683,4 +3682,3 @@ done:
 	mutex_unlock(&mfd->dma->ov_mutex);
 	return err;
 }
-
