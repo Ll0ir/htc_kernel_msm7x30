@@ -308,13 +308,13 @@ obj-$(CONFIG_MSM_FAKE_BATTERY) += fish_battery.o
 obj-$(CONFIG_MSM_RPC_VIBRATOR) += msm_vibrator.o
 obj-$(CONFIG_MSM_NATIVE_RESTART) += restart.o
 
-#obj-$(CONFIG_MSM_PROC_COMM_REGULATOR) += proccomm-regulator.o
-#ifdef CONFIG_MSM_PROC_COMM_REGULATOR
-#obj-$(CONFIG_MACH_MSM7X27_SURF) += board-msm7627-regulator.o
-#obj-$(CONFIG_MACH_MSM7X27_FFA) += board-msm7627-regulator.o
-#obj-$(CONFIG_ARCH_MSM7X30) += board-msm7x30-regulator.o
-#obj-$(CONFIG_ARCH_MSM7X27A) += board-msm7x27a-regulator.o
-#endif
+obj-$(CONFIG_MSM_PROC_COMM_REGULATOR) += proccomm-regulator.o
+ifdef CONFIG_MSM_PROC_COMM_REGULATOR
+obj-$(CONFIG_MACH_MSM7X27_SURF) += board-msm7627-regulator.o
+obj-$(CONFIG_MACH_MSM7X27_FFA) += board-msm7627-regulator.o
+obj-$(CONFIG_ARCH_MSM7X30) += board-msm7x30-regulator.o
+obj-$(CONFIG_ARCH_MSM7X27A) += board-msm7x27a-regulator.o
+endif
 
 obj-$(CONFIG_ARCH_MSM8960) += mdm2.o mdm_common.o
 obj-$(CONFIG_MSM_RTB) += msm_rtb.o
