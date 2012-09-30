@@ -706,6 +706,20 @@ config MACH_FSM9XXX_SURF
 	  chipset based SURF evaluation board and
 	  FFA board.
 
+config MACH_PRIMOU
+       depends on ARCH_MSM7X30
+       default n
+       bool "Primou"
+       help
+         Support for the Qualcomm Primou board.
+
+config MACH_PRIMOC
+       depends on ARCH_MSM7X30
+       default n
+       bool "Primoc"
+       help
+         Support for the Qualcomm Primoc board.
+
 endmenu
 
 config MSM_STACKED_MEMORY
@@ -717,17 +731,16 @@ config MSM_STACKED_MEMORY
 	  shared memory interface.  When not present regular RAM is used.
 
 config PHYS_OFFSET
-	hex
+	hex "Kernel physical start address"
 	default "0x40800000" if ARCH_MSM9615
 	default "0x80200000" if ARCH_APQ8064
-	default "0x80200000" if ARCH_MSM8960
-	default "0x80200000" if ARCH_MSM8930
+	default "0x80400000" if ARCH_MSM8960
 	default "0x80200000" if ARCH_MSMCOPPER
 	default "0x10000000" if ARCH_FSM9XXX
 	default "0x00200000" if !MSM_STACKED_MEMORY
 	default "0x00000000" if ARCH_QSD8X50 && MSM_SOC_REV_A
 	default "0x20000000" if ARCH_QSD8X50
-	default "0x40200000" if ARCH_MSM8X60
+	default "0x48000000" if ARCH_MSM8X60
 	default "0x10000000"
 
 config KERNEL_PMEM_EBI_REGION
