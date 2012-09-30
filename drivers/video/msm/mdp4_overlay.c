@@ -3182,9 +3182,12 @@ int mdp4_overlay_vsync_ctrl(struct fb_info *info, int enable)
 			mdp4_dsi_cmd_vsync_ctrl(0, cmd);
 		else if (ctrl->panel_mode & MDP4_PANEL_LCDC)
 			mdp4_lcdc_vsync_ctrl(0, cmd);
+#ifdef CONFIG_FB_MSM_TVOUT
 	} else if (hdmi_prim_display || info->node == 1) {
 		mdp4_dtv_vsync_ctrl(0, cmd);
+#else
 	}
+#endif
 
 	return 0;
 }
