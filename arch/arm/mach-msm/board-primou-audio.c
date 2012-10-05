@@ -200,7 +200,7 @@ void primou_snddev_hs_spk_pamp_on(int en)
 	primou_snddev_hsed_pamp_on(en);
 }
 
-void primou_snddev_bt_sco_pamp_on(int en)
+void primou_snddev_bt_sco_pam134p_on(int en)
 {
 	static int bt_sco_refcount;
 	pr_aud_info("%s %d\n", __func__, en);
