@@ -9,7 +9,6 @@
 #include <asm/gpio.h>
 #include <asm/io.h>
 #include <linux/skbuff.h>
-#include <linux/wifi_tiwlan.h>
 
 #include "board-primou.h"
 #include "board-primou-wifi.h"
