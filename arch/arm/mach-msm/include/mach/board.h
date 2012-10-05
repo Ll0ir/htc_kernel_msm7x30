@@ -303,13 +303,6 @@ struct msm_camera_gpio_conf {
 #endif
 };
 
-struct msm_camera_sensor_platform_info {
-	int mount_angle;
-	int sensor_reset;
-	struct camera_vreg_t *cam_vreg;
-	int num_vreg;
-	int32_t (*ext_power_ctrl) (int enable);
-	struct msm_camera_gpio_conf *gpio_conf;
 #ifdef CONFIG_MSM_CAMERA_V4L2
 struct msm_camera_platform_info {
 	 struct msm_cam_clk_info *clk_info;
