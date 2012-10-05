@@ -111,6 +111,7 @@ struct msm_camera_legacy_device_platform_data {
 #define MSM_CAMERA_FLASH_SRC_PWM  (0x00000001<<1)
 #define MSM_CAMERA_FLASH_SRC_CURRENT_DRIVER	(0x00000001<<2)
 #define MSM_CAMERA_FLASH_SRC_EXT     (0x00000001<<3)
+#define MSM_CAMERA_FLASH_SRC_LED (0x00000001<<3)
 
 
 struct msm_camera_sensor_flash_pmic {
@@ -143,6 +144,11 @@ struct msm_camera_sensor_flash_external {
 	struct msm_cam_expander_info *expander_info;
 };
 
+struct msm_camera_sensor_flash_led {
+	const char *led_name;
+	const int led_name_len;
+};
+
 struct msm_camera_sensor_flash_src {
 	int flash_sr_type;
 	int (*camera_flash)(int level);
@@ -154,6 +160,7 @@ struct msm_camera_sensor_flash_src {
 			current_driver_src;
 		struct msm_camera_sensor_flash_external
 			ext_driver_src;
+		struct msm_camera_sensor_flash_led led_src;
 	} _fsrc;
 };
 
@@ -296,6 +303,13 @@ struct msm_camera_gpio_conf {
 #endif
 };
 
+struct msm_camera_sensor_platform_info {
+	int mount_angle;
+	int sensor_reset;
+	struct camera_vreg_t *cam_vreg;
+	int num_vreg;
+	int32_t (*ext_power_ctrl) (int enable);
+	struct msm_camera_gpio_conf *gpio_conf;
 #ifdef CONFIG_MSM_CAMERA_V4L2
 struct msm_camera_platform_info {
 	 struct msm_cam_clk_info *clk_info;
@@ -371,7 +385,12 @@ struct msm_camera_sensor_info {
 	int zero_shutter_mode; /* S5K4E1GX: for doing zero shutter lag on MIPI */
 };
 
-int  msm_get_cam_resources(struct msm_camera_sensor_info *);
+struct msm_camera_board_info {
+	struct i2c_board_info *board_info;
+	uint8_t num_i2c_board_info;
+};
+
+int msm_get_cam_resources(struct msm_camera_sensor_info *);
 
 struct clk_lookup;
 
@@ -445,6 +464,8 @@ enum msm_mdp_hw_revision {
 	MDP_REV_40,
 	MDP_REV_41,
 	MDP_REV_42,
+	MDP_REV_43,
+	MDP_REV_44,
 };
 
 struct msm_panel_common_pdata {
@@ -456,6 +477,7 @@ struct msm_panel_common_pdata {
 	void (*panel_config_gpio)(int);
 	int (*vga_switch)(int select_vga);
 	int *gpio_num;
+	u32 mdp_max_clk;
 	int mdp_core_clk_rate;
 	unsigned num_mdp_clk;
 	int *mdp_core_clk_table;
@@ -468,6 +490,7 @@ struct msm_panel_common_pdata {
 	u32 ov0_wb_size;  /* overlay0 writeback size */
 	u32 ov1_wb_size;  /* overlay1 writeback size */
 	u32 mem_hid;
+	char const_splash_enabled;
 	int (*writeback_offset)(void);
 	int (*mdp_color_enhance)(void);
 	int (*mdp_gamma)(void);
@@ -514,6 +537,7 @@ struct mipi_dsi_platform_data {
 	int (*esd_fixup)(uint32_t mfd_data);
 	int (*dsi_client_reset)(void);
 	int (*get_lane_config)(void);
+	int (*splash_is_enabled)(void);
 	int target_type;
 };
 
@@ -538,12 +562,17 @@ struct mipi_dsi_panel_platform_data {
 	int fpga_3d_config_addr;
 	int *gpio;
 	struct mipi_dsi_phy_ctrl *phy_ctrl_settings;
+	void (*dsi_pwm_cfg)(void);
+	char dlane_swap;
 };
 
+#define PANEL_NAME_MAX_LEN 50
 struct msm_fb_platform_data {
 	int (*detect_client)(const char *name);
 	int mddi_prescan;
 	int (*allow_set_offset)(void);
+	char prim_panel_name[PANEL_NAME_MAX_LEN];
+	char ext_panel_name[PANEL_NAME_MAX_LEN];
 	int blt_mode;
 	uint32_t width;
 	uint32_t height;
@@ -573,6 +602,8 @@ struct msm_hdmi_platform_data {
 	int (*enable_5v)(int on);
 	int (*core_power)(int on, int show);
 	int (*cec_power)(int on);
+	int (*panel_power)(int on);
+	int (*gpio_config)(int on);
 	int (*init_irq)(void);
 	bool (*check_hdcp_hw_support)(void);
 #ifdef CONFIG_FB_MSM8960
@@ -608,9 +639,12 @@ struct msm_vidc_platform_data {
 	u32 enable_ion;
 	int disable_dmx;
 	int disable_fullhd;
+	u32 cp_enabled;
 #ifdef CONFIG_MSM_BUS_SCALING
 	struct msm_bus_scale_pdata *vidc_bus_client_pdata;
 #endif
+	int disable_turbo;
+		int const_mode_dpb_count;
 };
 
 #if defined(CONFIG_USB_PEHCI_HCD) || defined(CONFIG_USB_PEHCI_HCD_MODULE)
@@ -628,22 +662,25 @@ struct isp1763_platform_data {
 #ifdef CONFIG_OF_DEVICE
 void msm_copper_init(struct of_dev_auxdata **);
 #endif
-void  msm_add_devices(void);
+void msm_add_devices(void);
 void msm_copper_add_devices(void);
-void  msm_map_common_io(void);
-void  msm_map_qsd8x50_io(void);
-void  msm_map_msm8x60_io(void);
-void  msm_map_msm8960_io(void);
-void  msm_map_msm8930_io(void);
-void  msm_map_apq8064_io(void);
-void  msm_map_msm7x30_io(void);
-void  msm_map_fsm9xxx_io(void);
+void msm_map_common_io(void);
+void msm_map_qsd8x50_io(void);
+void msm_map_msm8x60_io(void);
+void msm_map_msm8960_io(void);
+void msm_map_msm8930_io(void);
+void msm_map_apq8064_io(void);
+void msm_map_msm7x30_io(void);
+void msm_map_fsm9xxx_io(void);
 void msm_map_copper_io(void);
-void  msm_init_irq(void);
+void msm_init_irq(void);
 void msm_copper_init_irq(void);
+void vic_handle_irq(struct pt_regs *regs);
+void msm_copper_reserve(void);
+void msm_copper_very_early(void);
 
 struct mmc_platform_data;
-int  msm_add_sdcc(unsigned int controller,
+int msm_add_sdcc(unsigned int controller,
 		struct mmc_platform_data *plat);
 
 struct msm_usb_host_platform_data;
