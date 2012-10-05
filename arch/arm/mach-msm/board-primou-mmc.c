@@ -16,18 +16,17 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
-#include <linux/mmc/host.h>
-#include <linux/mmc/sdio_ids.h>
 #include <linux/err.h>
 #include <linux/debugfs.h>
 #include <linux/gpio.h>
-#include <linux/mfd/pmic8058.h>
-#include <mach/htc_fast_clk.h>
-#include <linux/gpio.h>
 #include <linux/io.h>
+#include <linux/mmc/host.h>
+#include <linux/mmc/sdio_ids.h>
+#include <linux/mfd/pmic8058.h>
 
 #include <mach/vreg.h>
 #include <mach/htc_pwrsink.h>
+#include <mach/htc_fast_clk.h>
 
 #include <asm/mach/mmc.h>
 
