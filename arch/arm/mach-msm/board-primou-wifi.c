@@ -12,6 +12,7 @@
 #include <linux/wifi_tiwlan.h>
 
 #include "board-primou.h"
+#include "board-primou-wifi.h"
 
 int primou_wifi_power(int on);
 int primou_wifi_reset(int on);
