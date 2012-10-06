@@ -2196,7 +2196,7 @@ unsigned long mdp_get_core_clk(void)
 
 	return clk_rate;
 }
-
+/* TODO FIXME
 static int mdp_irq_clk_setup(struct platform_device *pdev,
 	char cont_splashScreen)
 {
@@ -2296,7 +2296,7 @@ static int mdp_irq_clk_setup(struct platform_device *pdev,
 #endif
 	return 0;
 }
-
+*/
 static int mdp_probe(struct platform_device *pdev)
 {
 	struct platform_device *msm_fb_dev = NULL;
