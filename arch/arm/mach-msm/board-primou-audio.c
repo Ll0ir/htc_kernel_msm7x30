@@ -168,7 +168,7 @@ vreg_aud_hp_1v8_faill:
 
 void primou_snddev_poweramp_on(int en)
 {
-	pr_aud_info("%s %d\n", __func__, en);
+//	pr_aud_info("%s %d\n", __func__, en);
 
 	if (en) {
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(PRIMOU_AUD_SPK_SD), 1);
@@ -180,12 +180,12 @@ void primou_snddev_poweramp_on(int en)
 
 void primou_snddev_hsed_pamp_on(int en)
 {
-	pr_aud_info("%s %d\n", __func__, en);
+//	pr_aud_info("%s %d\n", __func__, en);
 }
 
 void primou_snddev_pre_hsed_pamp_on(int en)
 {
-	pr_aud_info("%s %d\n", __func__, en);
+//	pr_aud_info("%s %d\n", __func__, en);
 
 	if (en) {
 		primou_hs_n1v8_enable(1);
@@ -203,7 +203,7 @@ void primou_snddev_hs_spk_pamp_on(int en)
 void primou_snddev_bt_sco_pamp_on(int en)
 {
 	static int bt_sco_refcount;
-	pr_aud_info("%s %d\n", __func__, en);
+//	pr_aud_info("%s %d\n", __func__, en);
 	mutex_lock(&bt_sco_lock);
 	if (en) {
 		if (++bt_sco_refcount == 1)
@@ -225,7 +225,7 @@ void primou_snddev_bt_sco_pamp_on(int en)
 
 void primou_snddev_imic_pamp_on(int en)
 {
-	pr_aud_info("%s: %d\n", __func__, en);
+//	pr_aud_info("%s: %d\n", __func__, en);
 
 	if (en) {
 		pmic_hsed_enable(PM_HSED_CONTROLLER_0, PM_HSED_ENABLE_ALWAYS);
@@ -237,7 +237,7 @@ void primou_snddev_imic_pamp_on(int en)
 
 void primou_snddev_emic_pamp_on(int en)
 {
-	pr_aud_info("%s %d\n", __func__, en);
+//	pr_aud_info("%s %d\n", __func__, en);
 #if 0
 	if (en)
 		gpio_request(PM8058_GPIO_PM_TO_SYS(PRIMOU_AUD_CODEC_EN), "aud_2v85_en");
@@ -257,13 +257,13 @@ int primou_get_rx_vol(uint8_t hw, int network, int level)
 	maxv = info->max_gain[network];
 	minv = info->min_gain[network];
 	vol = minv + ((maxv - minv) * level) / 100;
-	pr_aud_info("%s(%d, %d, %d) => %d\n", __func__, hw, network, level, vol);
+//	pr_aud_info("%s(%d, %d, %d) => %d\n", __func__, hw, network, level, vol);
 	return vol;
 }
 
 void primou_mic_bias_enable(int en, int shift)
 {
-	pr_aud_info("%s: %d\n", __func__, en);
+//	pr_aud_info("%s: %d\n", __func__, en);
 
 	if (en) {
 		gpio_set_value(PRIMOU_AUD_CODEC_EN, 1);
@@ -308,7 +308,7 @@ static void audio_work_func(struct work_struct *work)
 	int en = atomic_read(&beats_enabled);
 	int gain;
 
-	pr_aud_info("%s: %d\n", __func__, en);
+//	pr_aud_info("%s: %d\n", __func__, en);
 
 	if (en) {
 		for (gain = 0x10; gain >= 0x4; gain -= 0x4) {
@@ -412,7 +412,7 @@ void __init primou_audio_init(void)
 
 	audio_wq = create_workqueue("AUDIO_EFFECT_VOLUME");
 	if (audio_wq == NULL) {
-		pr_aud_info("%s: cannot create workqueue\n", __func__);
+//		pr_aud_info("%s: cannot create workqueue\n", __func__);
 	}
 
 }
