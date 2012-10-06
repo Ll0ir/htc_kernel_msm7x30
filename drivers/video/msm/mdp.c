@@ -24,7 +24,6 @@
 #include <linux/spinlock.h>
 #include <linux/hrtimer.h>
 #include <linux/clk.h>
-#include <mach/board.h>
 #include <mach/hardware.h>
 #include <linux/io.h>
 #include <linux/debugfs.h>
@@ -92,7 +91,6 @@ struct workqueue_struct *mdp_dma_wq;	/*mdp dma wq */
 struct workqueue_struct *mdp_vsync_wq;	/*mdp vsync wq */
 
 struct workqueue_struct *mdp_hist_wq;	/*mdp histogram wq */
-bool mdp_pp_initialized = FALSE;
 
 static struct workqueue_struct *mdp_pipe_ctrl_wq; /* mdp mdp pipe ctrl wq */
 static struct delayed_work mdp_pipe_ctrl_worker;
@@ -224,28 +222,10 @@ static void mdp_hist_lut_init_mgmt(struct mdp_hist_lut_mgmt *mgmt,
 	mutex_unlock(&mdp_hist_lut_list_mutex);
 }
 
-static int mdp_hist_lut_destroy(void)
-{
-	struct mdp_hist_lut_mgmt *temp;
-	struct list_head *pos, *q;
-
-	mutex_lock(&mdp_hist_lut_list_mutex);
-	list_for_each_safe(pos, q, &mdp_hist_lut_list) {
-		temp = list_entry(pos, struct mdp_hist_lut_mgmt, list);
-		list_del(pos);
-		kfree(temp);
-	}
-	mutex_unlock(&mdp_hist_lut_list_mutex);
-	return 0;
-}
-
 static int mdp_hist_lut_init(void)
 {
 	struct mdp_hist_lut_mgmt *temp;
-
-	if (mdp_pp_initialized)
-		return -EEXIST;
-
+	struct list_head *pos, *q;
 	INIT_LIST_HEAD(&mdp_hist_lut_list);
 
 	if (mdp_rev >= MDP_REV_30) {
@@ -276,7 +256,13 @@ static int mdp_hist_lut_init(void)
 	return 0;
 
 exit_list:
-	mdp_hist_lut_destroy();
+	mutex_lock(&mdp_hist_lut_list_mutex);
+	list_for_each_safe(pos, q, &mdp_hist_lut_list) {
+		temp = list_entry(pos, struct mdp_hist_lut_mgmt, list);
+		list_del(pos);
+		kfree(temp);
+	}
+	mutex_unlock(&mdp_hist_lut_list_mutex);
 exit:
 	pr_err("Failed initializing histogram LUT memory\n");
 	return -ENOMEM;
@@ -676,7 +662,6 @@ static int mdp_hist_init_mgmt(struct mdp_hist_mgmt *mgmt, uint32_t block)
 		goto error_extra;
 
 	INIT_WORK(&mgmt->mdp_histogram_worker, mdp_hist_read_work);
-	mgmt->hist = NULL;
 
 	mdp_hist_mgmt_array[index] = mgmt;
 	return 0;
@@ -699,32 +684,11 @@ static void mdp_hist_del_mgmt(struct mdp_hist_mgmt *mgmt)
 	kfree(mgmt->c0);
 }
 
-static int mdp_histogram_destroy(void)
-{
-	struct mdp_hist_mgmt *temp;
-	int i;
-
-	for (i = 0; i < MDP_HIST_MGMT_MAX; i++) {
-		temp = mdp_hist_mgmt_array[i];
-		if (!temp)
-			continue;
-		mdp_hist_del_mgmt(temp);
-		kfree(temp);
-		mdp_hist_mgmt_array[i] = NULL;
-	}
-	return 0;
-}
-
 static int mdp_histogram_init(void)
 {
 	struct mdp_hist_mgmt *temp;
 	int i, ret;
-
-	if (mdp_pp_initialized)
-		return -EEXIST;
-
-	mdp_hist_wq = alloc_workqueue("mdp_hist_wq",
-					WQ_NON_REENTRANT | WQ_UNBOUND, 0);
+	mdp_hist_wq = alloc_workqueue("mdp_hist_wq", WQ_UNBOUND, 0);
 
 	for (i = 0; i < MDP_HIST_MGMT_MAX; i++)
 		mdp_hist_mgmt_array[i] = NULL;
@@ -768,7 +732,14 @@ static int mdp_histogram_init(void)
 	return 0;
 
 exit_list:
-	mdp_histogram_destroy();
+	for (i = 0; i < MDP_HIST_MGMT_MAX; i++) {
+		temp = mdp_hist_mgmt_array[i];
+		if (!temp)
+			continue;
+		mdp_hist_del_mgmt(temp);
+		kfree(temp);
+		mdp_hist_mgmt_array[i] = NULL;
+	}
 exit:
 	return -ENOMEM;
 }
@@ -851,11 +822,7 @@ static int mdp_histogram_disable(struct mdp_hist_mgmt *mgmt)
 	MDP_OUTP(base + 0x0018, INTR_HIST_DONE | INTR_HIST_RESET_SEQ_DONE);
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
-	if (mgmt->hist != NULL) {
-		mgmt->hist = NULL;
-		complete(&mgmt->mdp_hist_comp);
-	}
-
+	complete(&mgmt->mdp_hist_comp);
 	mdp_disable_irq(mgmt->irq_term);
 	return 0;
 }
@@ -922,7 +889,6 @@ int mdp_histogram_start(struct mdp_histogram_start_req *req)
 		goto error;
 	}
 
-	mutex_lock(&mgmt->mdp_do_hist_mutex);
 	mutex_lock(&mgmt->mdp_hist_mutex);
 	if (mgmt->mdp_is_hist_start == TRUE) {
 		pr_err("%s histogram already started\n", __func__);
@@ -941,7 +907,6 @@ int mdp_histogram_start(struct mdp_histogram_start_req *req)
 
 error_lock:
 	mutex_unlock(&mgmt->mdp_hist_mutex);
-	mutex_unlock(&mgmt->mdp_do_hist_mutex);
 error:
 	return ret;
 }
@@ -958,7 +923,6 @@ int mdp_histogram_stop(struct fb_info *info, uint32_t block)
 		goto error;
 	}
 
-	mutex_lock(&mgmt->mdp_do_hist_mutex);
 	mutex_lock(&mgmt->mdp_hist_mutex);
 	if (mgmt->mdp_is_hist_start == FALSE) {
 		pr_err("%s histogram already stopped\n", __func__);
@@ -970,10 +934,7 @@ int mdp_histogram_stop(struct fb_info *info, uint32_t block)
 
 	if (!mfd->panel_power_on) {
 		mgmt->mdp_is_hist_data = FALSE;
-		if (mgmt->hist != NULL) {
-			mgmt->hist = NULL;
-			complete(&mgmt->mdp_hist_comp);
-		}
+		complete(&mgmt->mdp_hist_comp);
 		ret = -EINVAL;
 		goto error_lock;
 	}
@@ -982,12 +943,10 @@ int mdp_histogram_stop(struct fb_info *info, uint32_t block)
 
 	mutex_unlock(&mgmt->mdp_hist_mutex);
 	cancel_work_sync(&mgmt->mdp_histogram_worker);
-	mutex_unlock(&mgmt->mdp_do_hist_mutex);
 	return ret;
 
 error_lock:
 	mutex_unlock(&mgmt->mdp_hist_mutex);
-	mutex_unlock(&mgmt->mdp_do_hist_mutex);
 error:
 	return ret;
 }
@@ -1109,39 +1068,25 @@ static void mdp_hist_read_work(struct work_struct *data)
 		goto error;
 	}
 
-	if (mgmt->hist == NULL) {
-		if ((mgmt->mdp_is_hist_init == TRUE) &&
-			((!completion_done(&mgmt->mdp_hist_comp)) &&
-			waitqueue_active(&mgmt->mdp_hist_comp.wait)))
-			pr_err("mgmt->hist invalid NULL\n");
+	switch (mgmt->block) {
+	case MDP_BLOCK_DMA_P:
+	case MDP_BLOCK_DMA_S:
+		ret = _mdp_histogram_read_dma_data(mgmt);
+		break;
+	case MDP_BLOCK_VG_1:
+	case MDP_BLOCK_VG_2:
+		ret = _mdp_histogram_read_vg_data(mgmt);
+		break;
+	default:
+		pr_err("%s, invalid MDP block = %d\n", __func__, mgmt->block);
 		ret = -EINVAL;
+		goto error;
 	}
 
-	if (!ret) {
-		switch (mgmt->block) {
-		case MDP_BLOCK_DMA_P:
-		case MDP_BLOCK_DMA_S:
-			ret = _mdp_histogram_read_dma_data(mgmt);
-			break;
-		case MDP_BLOCK_VG_1:
-		case MDP_BLOCK_VG_2:
-			ret = _mdp_histogram_read_vg_data(mgmt);
-			break;
-		default:
-			pr_err("%s, invalid MDP block = %d\n", __func__,
-								mgmt->block);
-			ret = -EINVAL;
-			goto error;
-		}
-	}
-	/*
-	 * if read was triggered by an underrun or failed copying,
-	 * don't wake up readers
-	 */
-	if (!ret && mgmt->mdp_is_hist_valid && mgmt->mdp_is_hist_init) {
+	/* if read was triggered by an underrun, don't wake up readers*/
+	if (mgmt->mdp_is_hist_valid && mgmt->mdp_is_hist_init) {
 		mgmt->hist = NULL;
-		if (waitqueue_active(&mgmt->mdp_hist_comp.wait))
-			complete(&mgmt->mdp_hist_comp);
+		complete(&mgmt->mdp_hist_comp);
 	}
 
 	if (mgmt->mdp_is_hist_valid == FALSE)
@@ -1194,13 +1139,11 @@ err:
 	return ret;
 }
 
-#define MDP_HISTOGRAM_TIMEOUT_MS	84 /*5 Frames*/
 static int mdp_do_histogram(struct fb_info *info,
 					struct mdp_histogram_data *hist)
 {
 	struct mdp_hist_mgmt *mgmt = NULL;
 	int ret = 0;
-	unsigned long timeout = (MDP_HISTOGRAM_TIMEOUT_MS * HZ) / 1000;
 
 	ret = mdp_histogram_block2mgmt(hist->block, &mgmt);
 	if (ret) {
@@ -1237,26 +1180,12 @@ static int mdp_do_histogram(struct fb_info *info,
 		goto error_lock;
 	}
 
-	if (mgmt->hist != NULL) {
-		pr_err("%s; histogram attempted to be read twice\n", __func__);
-		ret = -EPERM;
-		goto error_lock;
-	}
-	INIT_COMPLETION(mgmt->mdp_hist_comp);
 	mgmt->hist = hist;
 	mutex_unlock(&mgmt->mdp_hist_mutex);
 
-	ret = wait_for_completion_killable_timeout(&mgmt->mdp_hist_comp,
-								timeout);
-	if (ret <= 0) {
-		if (!ret) {
-			mgmt->hist = NULL;
-			ret = -ETIMEDOUT;
-			pr_debug("%s: bin collection timedout", __func__);
-		} else {
-			mgmt->hist = NULL;
-			pr_debug("%s: bin collection interrupted", __func__);
-		}
+	if (wait_for_completion_killable(&mgmt->mdp_hist_comp)) {
+		pr_err("%s(): histogram bin collection killed", __func__);
+		ret = -EINVAL;
 		goto error;
 	}
 
@@ -1751,7 +1680,15 @@ void mdp_histogram_handle_isr(struct mdp_hist_mgmt *mgmt)
 		__mdp_histogram_kickoff(mgmt);
 
 	if (isr & INTR_HIST_DONE) {
-		queue_work(mdp_hist_wq, &mgmt->mdp_histogram_worker);
+		if (waitqueue_active(&mgmt->mdp_hist_comp.wait)) {
+			if (!queue_work(mdp_hist_wq,
+						&mgmt->mdp_histogram_worker)) {
+				pr_err("%s %d- can't queue hist_read\n",
+							 __func__, mgmt->block);
+			}
+		} else {
+			__mdp_histogram_reset(mgmt);
+		}
 	}
 }
 
@@ -1922,6 +1859,7 @@ static void mdp_drv_init(void)
 	spin_lock_init(&mdp_spin_lock);
 	mdp_dma_wq = create_singlethread_workqueue("mdp_dma_wq");
 	mdp_vsync_wq = create_singlethread_workqueue("mdp_vsync_wq");
+	mdp_hist_wq = create_singlethread_workqueue("mdp_hist_wq");
 	mdp_pipe_ctrl_wq = create_singlethread_workqueue("mdp_pipe_ctrl_wq");
 	INIT_DELAYED_WORK(&mdp_pipe_ctrl_worker,
 			  mdp_pipe_ctrl_workqueue_handler);
@@ -2196,7 +2134,7 @@ unsigned long mdp_get_core_clk(void)
 
 	return clk_rate;
 }
-/* TODO FIXME
+
 static int mdp_irq_clk_setup(struct platform_device *pdev,
 	char cont_splashScreen)
 {
@@ -2296,7 +2234,7 @@ static int mdp_irq_clk_setup(struct platform_device *pdev,
 #endif
 	return 0;
 }
-*/
+
 static int mdp_probe(struct platform_device *pdev)
 {
 	struct platform_device *msm_fb_dev = NULL;
@@ -2311,7 +2249,7 @@ static int mdp_probe(struct platform_device *pdev)
 #if defined(CONFIG_FB_MSM_MIPI_DSI) && defined(CONFIG_FB_MSM_MDP40)
 	struct mipi_panel_info *mipi;
 #endif
-//	static int contSplash_update_done;
+	static int contSplash_update_done;
 
 	if ((pdev->id == 0) && (pdev->num_resources > 0)) {
 		mdp_init_pdev = pdev;
@@ -2334,10 +2272,10 @@ static int mdp_probe(struct platform_device *pdev)
 
 		mdp_rev = mdp_pdata->mdp_rev;
 
-//		rc = mdp_irq_clk_setup(pdev, mdp_pdata->cont_splash_enabled);
+		rc = mdp_irq_clk_setup(pdev, mdp_pdata->cont_splash_enabled);
 
-		//if (rc)
-		//	return rc;
+		if (rc)
+			return rc;
 
 		mdp_clk_ctrl(1);
 
@@ -2345,7 +2283,7 @@ static int mdp_probe(struct platform_device *pdev)
 
 		/* initializing mdp hw */
 #ifdef CONFIG_FB_MSM_MDP40
-//		if (!(mdp_pdata->cont_splash_enabled))
+		if (!(mdp_pdata->cont_splash_enabled))
 			mdp4_hw_init();
 #else
 		mdp_hw_init();
@@ -2382,17 +2320,17 @@ static int mdp_probe(struct platform_device *pdev)
 	mfd->pdev = msm_fb_dev;
 	mfd->mdp_rev = mdp_rev;
 
-//	if (mdp_pdata) {
-//		if (mdp_pdata->cont_splash_enabled) {
-//			mfd->cont_splash_done = 0;
-//			if (!contSplash_update_done) {
-//				mdp_pipe_ctrl(MDP_CMD_BLOCK,
-//					MDP_BLOCK_POWER_ON, FALSE);
-//				contSplash_update_done = 1;
-//			}
-//		} else
-//			mfd->cont_splash_done = 1;
-//	}
+	if (mdp_pdata) {
+		if (mdp_pdata->cont_splash_enabled) {
+			mfd->cont_splash_done = 0;
+			if (!contSplash_update_done) {
+				mdp_pipe_ctrl(MDP_CMD_BLOCK,
+					MDP_BLOCK_POWER_ON, FALSE);
+				contSplash_update_done = 1;
+			}
+		} else
+			mfd->cont_splash_done = 1;
+	}
 
 	mfd->ov0_wb_buf = MDP_ALLOC(sizeof(struct mdp_buf_type));
 	mfd->ov1_wb_buf = MDP_ALLOC(sizeof(struct mdp_buf_type));
@@ -2412,7 +2350,6 @@ static int mdp_probe(struct platform_device *pdev)
 	/* initialize Post Processing data*/
 	mdp_hist_lut_init();
 	mdp_histogram_init();
-	mdp_pp_initialized = TRUE;
 
 	/* add panel data */
 	if (platform_device_add_data
@@ -2831,12 +2768,6 @@ static int mdp_remove(struct platform_device *pdev)
 {
 	if (footswitch != NULL)
 		regulator_put(footswitch);
-
-	/*free post processing memory*/
-	mdp_histogram_destroy();
-	mdp_hist_lut_destroy();
-	mdp_pp_initialized = FALSE;
-
 	iounmap(msm_mdp_base);
 	pm_runtime_disable(&pdev->dev);
 #ifdef CONFIG_MSM_BUS_SCALING
