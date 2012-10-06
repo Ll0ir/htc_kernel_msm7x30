@@ -2334,7 +2334,7 @@ static int mdp_probe(struct platform_device *pdev)
 
 		mdp_rev = mdp_pdata->mdp_rev;
 
-		rc = mdp_irq_clk_setup(pdev, mdp_pdata->cont_splash_enabled);
+//		rc = mdp_irq_clk_setup(pdev, mdp_pdata->cont_splash_enabled);
 
 		if (rc)
 			return rc;
@@ -2345,7 +2345,7 @@ static int mdp_probe(struct platform_device *pdev)
 
 		/* initializing mdp hw */
 #ifdef CONFIG_FB_MSM_MDP40
-		if (!(mdp_pdata->cont_splash_enabled))
+//		if (!(mdp_pdata->cont_splash_enabled))
 			mdp4_hw_init();
 #else
 		mdp_hw_init();
@@ -2382,17 +2382,17 @@ static int mdp_probe(struct platform_device *pdev)
 	mfd->pdev = msm_fb_dev;
 	mfd->mdp_rev = mdp_rev;
 
-	if (mdp_pdata) {
-		if (mdp_pdata->cont_splash_enabled) {
-			mfd->cont_splash_done = 0;
-			if (!contSplash_update_done) {
-				mdp_pipe_ctrl(MDP_CMD_BLOCK,
-					MDP_BLOCK_POWER_ON, FALSE);
-				contSplash_update_done = 1;
-			}
-		} else
-			mfd->cont_splash_done = 1;
-	}
+//	if (mdp_pdata) {
+//		if (mdp_pdata->cont_splash_enabled) {
+//			mfd->cont_splash_done = 0;
+//			if (!contSplash_update_done) {
+//				mdp_pipe_ctrl(MDP_CMD_BLOCK,
+//					MDP_BLOCK_POWER_ON, FALSE);
+//				contSplash_update_done = 1;
+//			}
+//		} else
+//			mfd->cont_splash_done = 1;
+//	}
 
 	mfd->ov0_wb_buf = MDP_ALLOC(sizeof(struct mdp_buf_type));
 	mfd->ov1_wb_buf = MDP_ALLOC(sizeof(struct mdp_buf_type));
