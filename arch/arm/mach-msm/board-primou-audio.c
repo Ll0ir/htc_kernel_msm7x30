@@ -343,10 +343,10 @@ void primou_enable_beats(int en)
 #endif
 }
 
-//static struct q5v2audio_icodec_ops iops = {
-//	.support_aic3254 = primou_support_aic3254,
-//	.support_adie = primou_support_adie,
-//};
+static struct q5v2audio_icodec_ops iops = {
+	.support_aic3254 = primou_support_aic3254,
+	.support_adie = primou_support_adie,
+};
 
 static struct acdb_ops acdb = {
 	.get_acdb_radio_buffer_size = primou_get_acdb_radio_buffer_size,
