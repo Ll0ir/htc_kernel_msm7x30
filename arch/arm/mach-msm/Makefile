@@ -356,7 +356,7 @@ endif # End CONFIG_ARCH_MSM7X30_SMD
 
 #PrimoU
 obj-$(CONFIG_MACH_PRIMOU) += board-primou.o
-obj-$(CONFIG_MACH_PRIMOU) += board-primou-panel.o board-primou-audio.o
+obj-$(CONFIG_MACH_PRIMOU) += board-primou-panel.o #board-primou-audio.o
 obj-$(CONFIG_MACH_PRIMOU) += board-primou-keypad.o
 obj-$(CONFIG_MACH_PRIMOU) += board-primou-mmc.o board-primou-wifi.o
 obj-$(CONFIG_MACH_PRIMOU) += htc_bdaddress.o board-primou-rfkill.o
