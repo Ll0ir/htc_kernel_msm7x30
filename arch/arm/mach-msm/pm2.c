@@ -1878,7 +1878,6 @@ static void msm_pm_restart(char str, const char *cmd)
 
 #if defined(CONFIG_MSM_RMT_STORAGE_SERVER) || defined(CONFIG_MSM_RMT_STORAGE_CLIENT)
 	printk(KERN_INFO "[K] from %s\r\n", __func__);
-	int wait_rmt_final_call_back(int timeout);
 	wait_rmt_final_call_back(10);
 	printk(KERN_INFO "[K] back %s\r\n", __func__);
 	/* wait 2 seconds to let radio reset device after the final EFS sync*/
