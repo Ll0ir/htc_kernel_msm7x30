@@ -2336,8 +2336,8 @@ static int mdp_probe(struct platform_device *pdev)
 
 //		rc = mdp_irq_clk_setup(pdev, mdp_pdata->cont_splash_enabled);
 
-		//if (rc)
-		//	return rc;
+		if (rc)
+			return rc;
 
 		mdp_clk_ctrl(1);
 
