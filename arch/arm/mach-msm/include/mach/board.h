@@ -462,43 +462,23 @@ enum msm_mdp_hw_revision {
 };
 
 struct msm_panel_common_pdata {
-	uintptr_t hw_revision_addr;
-	int gpio;
-	int (*backlight_level)(int level, int max, int min);
-	int (*pmic_backlight)(int level);
-	int (*panel_num)(void);
-	void (*panel_config_gpio)(int);
-	int (*vga_switch)(int select_vga);
-	int *gpio_num;
-	u32 mdp_max_clk;
-	int mdp_core_clk_rate;
-	unsigned num_mdp_clk;
-	int *mdp_core_clk_table;
-	int (*rgb_format)(void);
-	unsigned char (*shrink_pwm)(int val);
+         uintptr_t hw_revision_addr;
+         int gpio;
+         int (*backlight_level)(int level, int max, int min);
+         int (*pmic_backlight)(int level);
+         int (*panel_num)(void);
+         void (*panel_config_gpio)(int);
+         int (*vga_switch)(int select_vga);
+         int *gpio_num;
+         u32 mdp_max_clk;
 #ifdef CONFIG_MSM_BUS_SCALING
-	struct msm_bus_scale_pdata *mdp_bus_scale_table;
+         struct msm_bus_scale_pdata *mdp_bus_scale_table;
 #endif
-	int mdp_rev;
-	u32 ov0_wb_size;  /* overlay0 writeback size */
-	u32 ov1_wb_size;  /* overlay1 writeback size */
-	u32 mem_hid;
-	char const_splash_enabled;
-	int (*writeback_offset)(void);
-	int (*mdp_color_enhance)(void);
-	int (*mdp_gamma)(void);
-	void (*mdp_img_stick_wa)(bool);
-	unsigned long update_interval;
-	atomic_t img_stick_on;
-	struct panel_dcr_info *dcr_panel_pinfo;
-	unsigned int auto_bkl_stat;
-	int (*bkl_enable)(int);
-#ifdef CONFIG_FB_MSM8960
-	int (*acl_enable)(int);
-#else
-	int fpga_3d_config_addr;
-	struct gamma_curvy *abl_gamma_tbl;
-#endif
+         int mdp_rev;
+         u32 ov0_wb_size;  /* overlay0 writeback size */
+         u32 ov1_wb_size;  /* overlay1 writeback size */
+         u32 mem_hid;
+         char cont_splash_enabled;
 };
 
 struct lcdc_platform_data {
