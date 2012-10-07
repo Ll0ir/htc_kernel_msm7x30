@@ -61,6 +61,42 @@ MODULE_ALIAS("mmc:block");
 
 static DEFINE_MUTEX(block_mutex);
 
+//simonsimons34 add of del_gendisk_async
+void del_gendisk_async(struct gendisk *disk)
+{
+        struct disk_part_iter piter;
+        struct hd_struct *part;
+
+        /* invalidate stuff */
+        disk_part_iter_init(&piter, disk,
+                             DISK_PITER_INCL_EMPTY | DISK_PITER_REVERSE);
+        while ((part = disk_part_iter_next(&piter))) {
+                struct block_device *bdev = bdget_disk(disk, part->partno);
+                if (bdev) {
+                        __invalidate_device(bdev);
+                        bdput(bdev);
+                }
+                delete_partition(disk, part->partno);
+        }
+        disk_part_iter_exit(&piter);
+
+        invalidate_partition(disk, 0);
+        blk_free_devt(disk_to_dev(disk)->devt);
+        set_capacity(disk, 0);
+        disk->flags &= ~GENHD_FL_UP;
+        unlink_gendisk(disk);
+        part_stat_set_all(&disk->part0, 0);
+        disk->part0.stamp = 0;
+
+        kobject_put(disk->part0.holder_dir);
+        kobject_put(disk->slave_dir);
+        disk->driverfs_dev = NULL;
+#ifndef CONFIG_SYSFS_DEPRECATED
+        sysfs_remove_link(block_depr, dev_name(disk_to_dev(disk)));
+#endif
+        device_del(disk_to_dev(disk));
+}
+
 /*
  * The defaults come from config options but can be overriden by module
  * or bootarg options.
