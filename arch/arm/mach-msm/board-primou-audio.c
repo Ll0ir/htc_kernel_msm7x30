@@ -131,7 +131,7 @@ void primou_hs_n1v8_enable(int en)
 {
 	int rc = 0;
 
-//	pr_aud_info("%s: %d\n", __func__, en);
+	pr_aud_info("%s: %d\n", __func__, en);
 
 	if (!vreg_audio_n1v8) {
 
